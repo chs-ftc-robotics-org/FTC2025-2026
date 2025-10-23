@@ -11,12 +11,14 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.List;
 import java.util.Locale;
 
+@SuppressWarnings("unused")
 @Autonomous(name = "April Tag Test")
 public class OpAprilTest extends LinearOpMode {
     @Override
     public void runOpMode() {
         CameraName camera = hardwareMap.get(CameraName.class, "ctl/misc0");
         AprilTagProcessor aprilProcessor = AprilTagProcessor.easyCreateWithDefaults();
+        @SuppressWarnings("unused")
         VisionPortal visionPortal = VisionPortal.easyCreateWithDefaults(camera, aprilProcessor);
 
         waitForStart();
