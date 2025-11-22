@@ -16,7 +16,7 @@ public class Intake {
     }
 
     public void start() {
-        motor.setPower(0.9);
+        motor.setPower(0.75);
     }
 
     public void reverse() {
