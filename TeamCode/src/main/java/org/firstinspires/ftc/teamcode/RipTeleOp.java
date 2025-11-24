@@ -10,8 +10,14 @@ public class RipTeleOp extends LinearOpMode {
         Drivetrain drivetrain = new Drivetrain(this);
         Intake intake = new Intake(this);
         Launcher launcher = new Launcher(this);
+        Lift lift = new Lift(this);
 
         waitForStart();
+        
+        boolean prevA = false;
+
+        int leftCurrPos = 0;
+        int leftGoal = 0;
 
         while (opModeIsActive()) {
             drivetrain.move(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x);
@@ -27,7 +33,7 @@ public class RipTeleOp extends LinearOpMode {
             }
 
             if (gamepad2.right_bumper) {
-                launcher.start();
+                launcher.start(gamepad2.a ? 1.0 : 0.9);
             }
             else if (gamepad2.left_bumper) {
                 launcher.reverse();
@@ -42,9 +48,40 @@ public class RipTeleOp extends LinearOpMode {
             if (gamepad2.y) {
                 launcher.prepareFeed();
             }
+            
+            if (gamepad1.a && !prevA) {
+                drivetrain.rotateControls();
+            }
+            prevA = gamepad1.a;
+
+            if (gamepad1.x) {
+                lift.up();
+            } else if (gamepad1.y) {
+                lift.down();
+            } else {
+                lift.stop();
+            }
+
+//            leftCurrPos = (int) lift.getEncoderStatus();
+//            if (gamepad1.dpad_down) {
+//                // lift.goToBottom();
+//                if (leftGoal == 0) {
+//                    leftGoal = -36;
+//                    lift.down();
+//                }
+//            } else if (gamepad1.dpad_up) {
+//                lift.goToTop();
+//            }
 
             double launcherRPM = launcher.calculateLED();
+            double liftEnc = lift.getEncoderStatus();
+
+//            if (leftGoal != 0) {
+//                // if ()
+//            }
+
             telemetry.addData("Motor RPM", "%.2f", launcherRPM);
+            telemetry.addData("Lift Position", "%.2f", liftEnc);
             telemetry.update();
         }
     }

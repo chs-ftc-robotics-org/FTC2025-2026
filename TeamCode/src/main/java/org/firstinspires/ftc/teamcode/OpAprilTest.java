@@ -75,12 +75,12 @@ public class OpAprilTest extends LinearOpMode {
 
     private static String displayTagInfo(LLResultTypes.FiducialResult result) {
         Pose3D pose = result.getTargetPoseCameraSpace();
-        Position p = pose.getPosition();
-        YawPitchRollAngles orientation = pose.getOrientation();
+        // Position p = pose.getPosition();
+        // YawPitchRollAngles orientation = pose.getOrientation();
         return String.format(
                 Locale.ENGLISH,
-                "{ id: %d, pos: (%f, %f) }",
-                result.getFiducialId(), p.x, p.y
+                "{ id: %d, info: %s }",
+                result.getFiducialId(), pose.toString()
         );
     }
 }

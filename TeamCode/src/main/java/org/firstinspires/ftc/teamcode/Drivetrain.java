@@ -15,6 +15,7 @@ public class Drivetrain {
 
     private double factor = 1.0;
 
+    private boolean rotateControls = false;
 
     public Drivetrain(OpMode opMode) {
         HardwareMap map = opMode.hardwareMap;
@@ -39,11 +40,13 @@ public class Drivetrain {
      * @param theta Rotate (+ for ccw)
      */
     public void move(double x, double y, double theta) {
-        double a = -x + y - theta;
-        double b =  x + y + theta;
-        double c =  x + y - theta;
-        double d = -x + y + theta;
+        double r = rotateControls ? -1 : 1;
         double k = factor;
+
+        double a = (-x + y) * r - theta;
+        double b =  (x + y) * r + theta;
+        double c =  (x + y) * r - theta;
+        double d = (-x + y) * r + theta;
 
         frontLeft.setPower(a * k);
         frontRight.setPower(b * k);
@@ -57,6 +60,10 @@ public class Drivetrain {
 
     public void stop() {
         move(0.0, 0.0, 0.0);
+    }
+
+    public void rotateControls() {
+        rotateControls = !rotateControls;
     }
 
     @TeleOp(name = "Drivetrain Test", group = "tests")
@@ -74,4 +81,6 @@ public class Drivetrain {
             drivetrain.stop();
         }
     }
+
+
 }

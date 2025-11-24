@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -37,8 +38,8 @@ public class Launcher {
         opMode.telemetry.update();
     }
 
-    public void start() {
-        launcher.setPower(-1.0);
+    public void start(double power) {
+        launcher.setPower(-power);
     }
 
     public void reverse() {
@@ -56,7 +57,7 @@ public class Launcher {
 
         if (motorRPM == 0.0) {
             ledIndicator.setPosition(0.000);
-        } else if (motorRPM < 50.0) {
+        } else if (motorRPM < 42.5) {
             ledIndicator.setPosition(ORANGE);
         } else {
             ledIndicator.setPosition(GREEN);
@@ -83,7 +84,7 @@ public class Launcher {
             waitForStart();
             while (opModeIsActive()) {
                 if (gamepad1.right_bumper) {
-                    launcher.start();
+                    launcher.start(0.9);
                 }
                 else {
                     launcher.stop();
