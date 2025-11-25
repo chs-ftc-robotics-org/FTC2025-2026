@@ -55,10 +55,11 @@ public class Lift {
         return left.getCurrentPosition();
     }
 
-//    @TeleOp(name = "Drivetrain Test", group = "tests")
+//    @TeleOp(name = "Lift Test", group = "tests")
 //    public static class Test extends LinearOpMode {
 //        @Override
 //        public void runOpMode() {
+//            // make a Lift class test
 //            Drivetrain drivetrain = new Drivetrain(this);
 //            drivetrain.setFactor(0.5);
 //

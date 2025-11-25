@@ -13,32 +13,28 @@ public class RipTeleOp extends LinearOpMode {
         Lift lift = new Lift(this);
 
         waitForStart();
-        
-        boolean prevA = false;
 
-        int leftCurrPos = 0;
-        int leftGoal = 0;
+        boolean prevGamepad1A = false;
+
+        int liftCurrPos = 0;
+        int liftGoal = 0; // 0 to indicate no goal instead of Integer.MIN_VALUE or MAX_VALUE to avoid testing catastrophes
 
         while (opModeIsActive()) {
             drivetrain.move(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x);
 
             if (gamepad1.right_bumper || gamepad2.right_trigger > 0.1) {
                 intake.start();
-            }
-            else if (gamepad1.left_bumper || gamepad2.left_trigger > 0.1) {
+            } else if (gamepad1.left_bumper || gamepad2.left_trigger > 0.1) {
                 intake.reverse();
-            }
-            else {
+            } else {
                 intake.stop();
             }
 
             if (gamepad2.right_bumper) {
                 launcher.start(gamepad2.a ? 1.0 : 0.9);
-            }
-            else if (gamepad2.left_bumper) {
+            } else if (gamepad2.left_bumper) {
                 launcher.reverse();
-            }
-            else {
+            } else {
                 launcher.stop();
             }
 
@@ -48,42 +44,46 @@ public class RipTeleOp extends LinearOpMode {
             if (gamepad2.y) {
                 launcher.prepareFeed();
             }
-            
-            if (gamepad1.a && !prevA) {
+
+            if (gamepad1.a && !prevGamepad1A) {
                 drivetrain.rotateControls();
             }
-            prevA = gamepad1.a;
+            prevGamepad1A = gamepad1.a;
 
-            if (gamepad1.x) {
+            if (gamepad1.y) {
                 lift.up();
-            } else if (gamepad1.y) {
+            } else if (gamepad1.x) {
                 lift.down();
             } else {
-                lift.stop();
+                // Automatic lift movement will jitter without the if-statement below
+                if (liftGoal == 0) {
+                    lift.stop();
+                }
             }
 
-//            leftCurrPos = (int) lift.getEncoderStatus();
-//            if (gamepad1.dpad_down) {
-//                // lift.goToBottom();
-//                if (leftGoal == 0) {
-//                    leftGoal = -36;
-//                    lift.down();
-//                }
-//            } else if (gamepad1.dpad_up) {
-//                lift.goToTop();
-//            }
+            liftCurrPos = (int) lift.getEncoderStatus();
+            if (gamepad1.dpad_down) {
+                liftGoal = -36;
+                lift.down();
+            } else if (gamepad1.dpad_up) {
+                liftGoal = 131100;
+                lift.up();
+            }
 
-            double launcherRPM = launcher.calculateLED();
-            double liftEnc = lift.getEncoderStatus();
+            if (liftGoal != 0) {
+                // Allow for 6000 tick stopping detection range for testing purposes
+                if (liftGoal - 3000 <= liftCurrPos && liftGoal + 3000 >= liftCurrPos) {
+                    lift.stop();
+                    liftGoal = 0;
+                } else if (liftCurrPos < liftGoal) {
+                    lift.up();
+                } else if (liftCurrPos > liftGoal) {
+                    lift.down();
+                }
+            }
 
-//            if (leftGoal != 0) {
-//                // if ()
-//            }
-
-            telemetry.addData("Motor RPM", "%.2f", launcherRPM);
-            telemetry.addData("Lift Position", "%.2f", liftEnc);
+            telemetry.addData("Lift Position", liftCurrPos);
             telemetry.update();
         }
     }
-
 }
