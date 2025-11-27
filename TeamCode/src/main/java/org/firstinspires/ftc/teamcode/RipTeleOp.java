@@ -11,6 +11,8 @@ public class RipTeleOp extends LinearOpMode {
         Intake intake = new Intake(this);
         Launcher launcher = new Launcher(this);
         Lift lift = new Lift(this);
+        Odometry odometry = new Odometry(this);
+        odometry.reset();
 
         waitForStart();
 
@@ -38,10 +40,10 @@ public class RipTeleOp extends LinearOpMode {
                 launcher.stop();
             }
 
-            if (gamepad2.x) {
+            if (gamepad2.y) {
                 launcher.pushFeed();
             }
-            if (gamepad2.y) {
+            else {
                 launcher.prepareFeed();
             }
 
@@ -50,10 +52,13 @@ public class RipTeleOp extends LinearOpMode {
             }
             prevGamepad1A = gamepad1.a;
 
+            boolean liftManual = false;
             if (gamepad1.y) {
                 lift.up();
+                liftManual = true;
             } else if (gamepad1.x) {
                 lift.down();
+                liftManual = true;
             } else {
                 // Automatic lift movement will jitter without the if-statement below
                 if (liftGoal == 0) {
@@ -70,6 +75,8 @@ public class RipTeleOp extends LinearOpMode {
                 lift.up();
             }
 
+            if (liftManual) liftGoal = 0;
+
             if (liftGoal != 0) {
                 // Allow for 6000 tick stopping detection range for testing purposes
                 if (liftGoal - 3000 <= liftCurrPos && liftGoal + 3000 >= liftCurrPos) {
@@ -82,7 +89,12 @@ public class RipTeleOp extends LinearOpMode {
                 }
             }
 
+            launcher.displayStatus();
+
+            telemetry.addData("Launcher RPM", launcher.getRpm());
             telemetry.addData("Lift Position", liftCurrPos);
+            odometry.update();
+            odometry.log();
             telemetry.update();
         }
     }

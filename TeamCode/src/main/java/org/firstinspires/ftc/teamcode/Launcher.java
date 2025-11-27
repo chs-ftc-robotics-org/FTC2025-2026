@@ -3,9 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
@@ -50,29 +48,42 @@ public class Launcher {
         launcher.setPower(0.0);
     }
 
-    public double calculateLED() {
+    public double getRpm() {
         double ticksPerRev = launcher.getMotorType().getTicksPerRev();
         double ticksPerSecond = launcher.getVelocity();
         double motorRPM = Math.abs((ticksPerSecond / ticksPerRev) * 60.0);
 
-        if (motorRPM == 0.0) {
+        return motorRPM;
+    }
+
+    public void displayStatus() {
+        double rpm = getRpm();
+
+        if (rpm == 0.0) {
             ledIndicator.setPosition(0.000);
-        } else if (motorRPM < 42.5) {
+        } else if (rpm < 42.5) {
             ledIndicator.setPosition(ORANGE);
         } else {
             ledIndicator.setPosition(GREEN);
         }
-
-        return motorRPM;
     }
+
+    private static final double PUSH_LOCATION = 0.315;
+    private static final double PREP_LOCATION = 0.2;
 
     public void pushFeed() {
         // Slightly above 0 so that it's not in contact with the launch wheels
-        inputFeed.setPosition(0.2);
+        // inputFeed.setPosition(0.2);
+        inputFeed.setPosition(PUSH_LOCATION);
+    }
+
+    public void lockFeed() {
+        inputFeed.setPosition((PUSH_LOCATION + PREP_LOCATION) / 2);
     }
 
     public void prepareFeed() {
-        inputFeed.setPosition(0.315);
+        // inputFeed.setPosition(0.315);
+        inputFeed.setPosition(PREP_LOCATION);
     }
 
     @TeleOp(name = "Launcher Test", group = "tests")
