@@ -6,107 +6,151 @@ import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.sun.tools.javac.jvm.Gen;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 @Autonomous(name = "RIP Autonomous")
 public class RipAutonomous extends LinearOpMode {
     @FunctionalInterface
-    interface Task {
+    interface RunningTask {
         enum Result {
             CONTINUE,
             FINISH
         }
 
         Result run();
+    }
 
-        static Task sleep(int millis) {
-            ElapsedTime time = new ElapsedTime();
-            time.reset();
+    interface Task {
+        RunningTask spawn();
 
+        static Task of(RunningTask r) {
+            return () -> r;
+        }
+
+        static Task pause(int millis) {
             return () -> {
-                if (time.time(TimeUnit.MILLISECONDS) >= millis) {
-                    return FINISH;
-                }
-                return CONTINUE;
+                ElapsedTime time = new ElapsedTime();
+                Box<Boolean> waiting = Box.of(true);
+
+                return () -> {
+                    if (waiting.get()) {
+                        time.reset();
+                        waiting.set(false);
+                    }
+                    if (time.time(TimeUnit.MILLISECONDS) >= millis) {
+                        return FINISH;
+                    }
+                    return CONTINUE;
+                };
             };
         }
 
         static Task once(Runnable f) {
-            return () -> {
+            return () -> () -> {
                 f.run();
                 return FINISH;
             };
         }
 
-        static Task sequence(Task... tasks) {
-            Box<Integer> current = new Box<>(0);
+        static Task sequence(final Task... tasks) {
             return () -> {
-                Task t = tasks[current.get()];
-                Task.Result result = t.run();
-                if (result == FINISH) {
-                    current.set(current.get() + 1);
-                    if (current.get() == tasks.length) return Task.Result.FINISH;
-                }
-                return Task.Result.CONTINUE;
-            };
-        }
-
-        static Task parallel(Task... tasks) {
-            Box<Integer> remaining = new Box<>(tasks.length);
-            boolean[] done = new boolean[tasks.length];
-            return () -> {
-                for (int i = 0; i < tasks.length; i++) {
-                    if (done[i]) continue;
-                    Task.Result result = tasks[i].run();
+                Box<Integer> current = Box.of(0);
+                Box<RunningTask> spawned = Box.of(tasks[0].spawn());
+                return () -> {
+                    RunningTask t = spawned.get();
+                    RunningTask.Result result = t.run();
                     if (result == FINISH) {
-                        remaining.set(remaining.get() - 1);
-                        done[i] = true;
+                        current.set(current.get() + 1);
+                        if (current.get() == tasks.length) return FINISH;
+                        spawned.set(tasks[current.get()].spawn());
                     }
-                }
-                return remaining.get() == 0 ? FINISH : CONTINUE;
+                    return CONTINUE;
+                };
+            };
+        }
+
+        static Task all(Task... tasks) {
+            return () -> {
+                Box<Integer> remaining = Box.of(tasks.length);
+                RunningTask[] runningTasks = Arrays.stream(tasks).map(Task::spawn).toArray(RunningTask[]::new);
+                boolean[] done = new boolean[tasks.length];
+                return () -> {
+                    for (int i = 0; i < tasks.length; i++) {
+                        if (done[i]) continue;
+                        RunningTask.Result result = runningTasks[i].run();
+                        if (result == FINISH) {
+                            remaining.set(remaining.get() - 1);
+                            done[i] = true;
+                        }
+                    }
+                    return remaining.get() == 0 ? FINISH : CONTINUE;
+                };
+            };
+        }
+
+        static Task any(Task... tasks) {
+            return () -> {
+                Box<Boolean> done = Box.of(false);
+                RunningTask[] runningTasks = Arrays.stream(tasks).map(Task::spawn).toArray(RunningTask[]::new);
+                return () -> {
+                    for (RunningTask r : runningTasks) {
+                        if (FINISH == r.run()) {
+                            done.set(true);
+                        }
+                    }
+                    return done.get() ? FINISH : CONTINUE;
+                };
             };
         }
     }
 
-    static final Task.Result CONTINUE = Task.Result.CONTINUE;
-    static final Task.Result FINISH = Task.Result.FINISH;
-
-    enum State {
-        INIT,
-        MOVE,
-        MOVE2,
-        SPIN,
-        STOP,
-    }
-
-    private State state = State.INIT;
-
-    /*
-    private State state() {
-        return state;
-    }
-
-    private void stateTo(State new_) {
-        state = new_;
-    }
-    */
+    static final RunningTask.Result CONTINUE = RunningTask.Result.CONTINUE;
+    static final RunningTask.Result FINISH = RunningTask.Result.FINISH;
 
     private Odometry odometry;
     private Drivetrain drivetrain;
     private Launcher launcher;
 
-    @Override
-    public void runOpMode() {
+    private void initSubsystems() {
         drivetrain = new Drivetrain(this);
         drivetrain.setFactor(0.9);
-        DistanceSensor ds = hardwareMap.get(DistanceSensor.class, "sensors/distance");
-
+        DistanceSensor _ds = hardwareMap.get(DistanceSensor.class, "sensors/distance");
         launcher = new Launcher(this);
-
         odometry = new Odometry(this);
         odometry.reset();
+    }
+
+    @Override
+    public void runOpMode() {
+        initSubsystems();
 
         waitForStart();
+
+        final Task LAUNCH = Task.sequence(
+                Task.once(launcher::lockFeed),
+                Task.pause(2000),
+                Task.once(() -> launcher.start(0.9)),
+                Task.pause(2000),
+                Task.of(() -> {
+                    if (launcher.getRpm() >= 45) {
+                        return FINISH;
+                    }
+                    launcher.displayStatus();
+                    telemetry.addData("RPM", launcher.getRpm());
+                    return CONTINUE;
+                }),
+                Task.pause(3000),
+                Task.once(launcher::pushFeed),
+                Task.pause(1000),
+                Task.of(() -> {
+                    launcher.stop();
+                    launcher.prepareFeed();
+                    return FINISH;
+                })
+        );
+
+        runTask(LAUNCH);
 
         /*
         runTask(() -> {
@@ -142,8 +186,9 @@ public class RipAutonomous extends LinearOpMode {
 
 
         // @formatter:off
+
         /*
-        runSequence(
+        runTask(Task.sequence(
                 // Init
                 () -> {
                     drivetrain.move(0.5, 0, 0);
@@ -171,62 +216,24 @@ public class RipAutonomous extends LinearOpMode {
                         return FINISH;
                     }
                     return CONTINUE;
-                },
-                () -> {
-                    runSequence(launch);
-                    return FINISH;
                 }
-        );
+                // Task.sequence(launch)
+        ));
         */
 
+
         // formatter:on
-
-        runTask(launch);
     }
-
-//    private void moveToPrelaunch() {
-//        runTask(() -> {
-//            switch (state) {
-//
-//            }
-//        });
-//    }
 
     private void runTask(Task task) {
+        RunningTask r = task.spawn();
         while (opModeIsActive()) {
             odometry.update();
-            Task.Result result = task.run();
+            RunningTask.Result result = r.run();
             odometry.log();
-            telemetry.addData("State", state);
             telemetry.update();
 
-            if (result == Task.Result.FINISH) break;
+            if (result == FINISH) break;
         }
     }
-
-    private final Task launch = Task.sequence(
-            Task.once(() -> launcher.lockFeed()),
-            Task.sleep(200),
-            Task.once(() -> launcher.start(0.9)),
-            () -> {
-                if (launcher.getRpm() >= 45) {
-                    return FINISH;
-                }
-                launcher.displayStatus();
-                telemetry.addData("RPM", launcher.getRpm());
-                return CONTINUE;
-            },
-            Task.once(() -> launcher.pushFeed()),
-//            () -> {
-//                launcher.pushFeed();
-//
-//                return CONTINUE;
-//            },
-            Task.sleep(500),
-            () -> {
-                launcher.stop();
-                launcher.prepareFeed();
-                return FINISH;
-            }
-    );
 }

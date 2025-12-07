@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode;
 public class Box<T> {
     private T t;
 
-    public Box(T t) {
+    private Box(T t) {
         this.t = t;
     }
 
@@ -13,5 +13,9 @@ public class Box<T> {
 
     public void set(T t) {
         this.t = t;
+    }
+
+    public static <T> Box<T> of(T t) {
+        return new Box<>(t);
     }
 }
