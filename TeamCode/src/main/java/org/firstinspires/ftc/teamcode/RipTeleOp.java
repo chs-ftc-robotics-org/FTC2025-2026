@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import java.util.Optional;
+
 @TeleOp(name = "RIP TeleOp")
 public class RipTeleOp extends LinearOpMode {
     @Override
@@ -19,7 +21,7 @@ public class RipTeleOp extends LinearOpMode {
         boolean prevGamepad1A = false;
 
         int liftCurrPos = 0;
-        int liftGoal = 0; // 0 to indicate no goal instead of Integer.MIN_VALUE or MAX_VALUE to avoid testing catastrophes
+        Optional<Integer> liftGoal = Optional.empty();
 
         while (opModeIsActive()) {
             drivetrain.move(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x);
@@ -61,30 +63,32 @@ public class RipTeleOp extends LinearOpMode {
                 liftManual = true;
             } else {
                 // Automatic lift movement will jitter without the if-statement below
-                if (liftGoal == 0) {
+                if (!liftGoal.isPresent()) {
                     lift.stop();
                 }
             }
 
             liftCurrPos = (int) lift.getEncoderStatus();
             if (gamepad1.dpad_down) {
-                liftGoal = -36;
+                liftGoal = Optional.of(Lift.BOTTOM_POSITION);
                 lift.down();
             } else if (gamepad1.dpad_up) {
-                liftGoal = 131100;
+                liftGoal = Optional.of(Lift.TOP_POSITION);
                 lift.up();
             }
 
-            if (liftManual) liftGoal = 0;
+            if (liftManual) liftGoal = Optional.empty();
 
-            if (liftGoal != 0) {
+            if (liftGoal.isPresent()) {
+                int goal = liftGoal.get();
                 // Allow for 6000 tick stopping detection range for testing purposes
-                if (liftGoal - 3000 <= liftCurrPos && liftGoal + 3000 >= liftCurrPos) {
+                // if (goal - 3000 <= liftCurrPos && goal + 3000 >= liftCurrPos) {
+                if (Math.abs(goal - liftCurrPos) <= 3000) {
                     lift.stop();
-                    liftGoal = 0;
-                } else if (liftCurrPos < liftGoal) {
+                    liftGoal = Optional.empty();
+                } else if (liftCurrPos < goal) {
                     lift.up();
-                } else if (liftCurrPos > liftGoal) {
+                } else if (liftCurrPos > goal) {
                     lift.down();
                 }
             }
