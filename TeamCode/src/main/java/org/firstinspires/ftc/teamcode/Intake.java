@@ -4,19 +4,21 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 public class Intake {
     private final DcMotor motor;
 
     public Intake(OpMode opMode) {
         motor = opMode.hardwareMap.dcMotor.get("intake");
+        motor.setDirection(DcMotorSimple.Direction.REVERSE);
         motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         opMode.telemetry.addLine("Intake initialized");
     }
 
     public void start() {
-        motor.setPower(0.75);
+        motor.setPower(0.65);
     }
 
     public void reverse() {
