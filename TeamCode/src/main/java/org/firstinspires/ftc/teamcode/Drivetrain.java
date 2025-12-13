@@ -7,11 +7,14 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import java.util.List;
+
 public class Drivetrain {
     private final DcMotor frontLeft;
     private final DcMotor frontRight;
     private final DcMotor backLeft;
     private final DcMotor backRight;
+    private final List<DcMotor> motors;
 
     private double factor = 1.0;
 
@@ -23,11 +26,14 @@ public class Drivetrain {
         frontRight = map.dcMotor.get("drive/fr");
         backLeft = map.dcMotor.get("drive/bl");
         backRight = map.dcMotor.get("drive/br");
+        motors = List.of(frontLeft, frontRight, backLeft, backRight);
 
         frontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         frontRight.setDirection(DcMotorSimple.Direction.REVERSE);
         backLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         backRight.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        //motors.forEach(m -> m.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE));
 
         opMode.telemetry.addLine("Drivetrain initialized");
         opMode.telemetry.update();
@@ -48,10 +54,10 @@ public class Drivetrain {
         double c =  (x + y) * r - theta;
         double d = (-x + y) * r + theta;
 
-        frontLeft.setPower(a * k);
-        frontRight.setPower(b * k);
-        backLeft.setPower(c * k);
-        backRight.setPower(d * k);
+        setPowerSafe(frontLeft, a * k);
+        setPowerSafe(frontRight, b * k);
+        setPowerSafe(backLeft, c * k);
+        setPowerSafe(backRight, d * k);
     }
 
     public void setFactor(double k) {
@@ -64,6 +70,16 @@ public class Drivetrain {
 
     public void rotateControls() {
         rotateControls = !rotateControls;
+    }
+
+    private static void setPowerSafe(DcMotor m, double power) {
+        m.setPower(power);
+
+//        final double SLEW_RATE = 0.2;
+//        double current = m.getPower();
+//        double diff = power - current;
+//        double limited = Util.clamp(diff, -SLEW_RATE, SLEW_RATE);
+//        m.setPower(power + limited);
     }
 
     @TeleOp(name = "Drivetrain Test", group = "tests")
@@ -81,6 +97,4 @@ public class Drivetrain {
             drivetrain.stop();
         }
     }
-
-
 }
