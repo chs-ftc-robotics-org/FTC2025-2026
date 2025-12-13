@@ -2,8 +2,10 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @TeleOp(name = "RIP TeleOp")
 public class RipTeleOp extends LinearOpMode {
@@ -14,7 +16,7 @@ public class RipTeleOp extends LinearOpMode {
         Launcher launcher = new Launcher(this);
         Lift lift = new Lift(this);
         Odometry odometry = new Odometry(this);
-        odometry.reset();
+        odometry.reset(24, 0, 0);
 
         waitForStart();
 
@@ -22,6 +24,9 @@ public class RipTeleOp extends LinearOpMode {
 
         int liftCurrPos = 0;
         Optional<Integer> liftGoal = Optional.empty();
+
+        ElapsedTime gamepad2BTimer = new ElapsedTime();
+        boolean gamepad2BActivated = false;
 
         while (opModeIsActive()) {
             drivetrain.move(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x);
@@ -35,7 +40,7 @@ public class RipTeleOp extends LinearOpMode {
             }
 
             if (gamepad2.right_bumper) {
-                launcher.start(gamepad2.a ? 1.0 : 0.9);
+                launcher.start(gamepad2.a ? 1.0 : Launcher.BASELINE_POWER);
             } else if (gamepad2.left_bumper) {
                 launcher.reverse();
             } else {
@@ -45,8 +50,24 @@ public class RipTeleOp extends LinearOpMode {
             if (gamepad2.y) {
                 launcher.pushFeed();
             }
-            else {
-                launcher.prepareFeed();
+            else if (!gamepad2BActivated) {
+                launcher.resetFeed();
+            }
+
+            if (gamepad2.b && !gamepad2BActivated) {
+                gamepad2BActivated = true;
+                gamepad2BTimer.reset();
+                launcher.lockFeed();
+            }
+
+            if (gamepad2BActivated) {
+                telemetry.addLine("2B Activated");
+                if (gamepad2BTimer.time(TimeUnit.MILLISECONDS) >= 2250 && launcher.isAtPosition(Launcher.PUSH_LOCATION)) {
+                    launcher.resetFeed();
+                    gamepad2BActivated = false;
+                } else if (gamepad2BTimer.time(TimeUnit.MILLISECONDS) >= 1500) {
+                    launcher.pushFeed();
+                }
             }
 
             if (gamepad1.a && !prevGamepad1A) {
