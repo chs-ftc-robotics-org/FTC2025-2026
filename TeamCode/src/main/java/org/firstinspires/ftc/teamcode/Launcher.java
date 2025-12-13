@@ -8,6 +8,9 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
 public class Launcher {
+    public static final double BASELINE_POWER = 0.73;
+    public static final double IDEAL_RPM = 33.0;
+
     private final DcMotorEx launcher;
 
     /*
@@ -23,13 +26,14 @@ public class Launcher {
 
     public Launcher(OpMode opMode) {
         HardwareMap map = opMode.hardwareMap;
-        // launcher = map.dcMotor.get("launcher/motor");
         launcher = map.get(DcMotorEx.class, "launcher/motor");
+        // launcherEnc = map.get(DcMotorEx.class, "launcher/motor");
+        // launcher = map.get(Servo.class, "test/pwm");
         inputFeed = map.servo.get("launcher/feed");
         ledIndicator = map.servo.get("launcher/indicator");
 
         // inputFeed.setPosition(0.15);
-        launcher.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        // launcherEnc.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         ledIndicator.setPosition(0.000);
 
         opMode.telemetry.addLine("Launcher initialized");
@@ -38,22 +42,23 @@ public class Launcher {
 
     public void start(double power) {
         launcher.setPower(-power);
+        // launcher.setPosition(0.5 + power);
     }
 
     public void reverse() {
         launcher.setPower(1.0);
+        // start(-1.0);
     }
 
     public void stop() {
         launcher.setPower(0.0);
+        // start(0.0);
     }
 
     public double getRpm() {
         double ticksPerRev = launcher.getMotorType().getTicksPerRev();
         double ticksPerSecond = launcher.getVelocity();
-        double motorRPM = Math.abs((ticksPerSecond / ticksPerRev) * 60.0);
-
-        return motorRPM;
+        return Math.abs((ticksPerSecond / ticksPerRev) * 60.0);
     }
 
     public void displayStatus() {
@@ -61,15 +66,15 @@ public class Launcher {
 
         if (rpm == 0.0) {
             ledIndicator.setPosition(0.000);
-        } else if (rpm < 42.5) {
+        } else if (rpm < IDEAL_RPM) {
             ledIndicator.setPosition(ORANGE);
         } else {
             ledIndicator.setPosition(GREEN);
         }
     }
 
-    private static final double PUSH_LOCATION = 0.315;
-    private static final double PREP_LOCATION = 0.2;
+    public static final double PUSH_LOCATION = 0.315;
+    public static final double PREP_LOCATION = 0.2;
 
     public void pushFeed() {
         // Slightly above 0 so that it's not in contact with the launch wheels
@@ -78,12 +83,17 @@ public class Launcher {
     }
 
     public void lockFeed() {
-        inputFeed.setPosition((PUSH_LOCATION + PREP_LOCATION) / 2);
+        double t = 0.7;
+        inputFeed.setPosition(PUSH_LOCATION * t + PREP_LOCATION * (1 - t));
     }
 
-    public void prepareFeed() {
+    public void resetFeed() {
         // inputFeed.setPosition(0.315);
         inputFeed.setPosition(PREP_LOCATION);
+    }
+
+    public boolean isAtPosition(double pos) {
+        return inputFeed.getPosition() == pos;
     }
 
     @TeleOp(name = "Launcher Test", group = "tests")
@@ -105,7 +115,7 @@ public class Launcher {
                     launcher.pushFeed();
                 }
                 if (gamepad1.y) {
-                    launcher.prepareFeed();
+                    launcher.resetFeed();
                 }
             }
 
