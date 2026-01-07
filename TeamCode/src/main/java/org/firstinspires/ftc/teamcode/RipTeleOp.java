@@ -26,10 +26,11 @@ public class RipTeleOp extends LinearOpMode {
         Optional<Integer> liftGoal = Optional.empty();
 
         ElapsedTime gamepad2BTimer = new ElapsedTime();
+        boolean prevGamepad2B = false;
         boolean gamepad2BActivated = false;
 
         while (opModeIsActive()) {
-            drivetrain.move(gamepad1.left_stick_x, gamepad1.left_stick_y, gamepad1.right_stick_x);
+            drivetrain.move(gamepad1.left_stick_x, gamepad1.left_stick_y, 0.7 * gamepad1.right_stick_x);
 
             if (gamepad1.right_bumper || gamepad2.right_trigger > 0.1) {
                 intake.start();
@@ -40,35 +41,60 @@ public class RipTeleOp extends LinearOpMode {
             }
 
             if (gamepad2.right_bumper) {
-                launcher.start(gamepad2.a ? 1.0 : Launcher.BASELINE_POWER);
+                // launcher.start(gamepad2.a ? 1.0 : Launcher.BASELINE_POWER);
+                launcher.startFlywheel();
+                launcher.flywheelReady();
             } else if (gamepad2.left_bumper) {
-                launcher.reverse();
+                launcher.reverseFlywheel();
             } else {
-                launcher.stop();
+                launcher.stopFlywheel();
             }
 
             if (gamepad2.y) {
-                launcher.pushFeed();
+//                launcher.pushFeed();
+                launcher.feedPushHalf();
             }
             else if (!gamepad2BActivated) {
-                launcher.resetFeed();
+                //launcher.resetFeed();
+                launcher.feedIdle();
+                launcher.raiseIdle();
             }
 
-            if (gamepad2.b && !gamepad2BActivated) {
-                gamepad2BActivated = true;
-                gamepad2BTimer.reset();
-                launcher.lockFeed();
+            if (gamepad2.b) {
+                launcher.raiseActivate();
+            }
+            else {
+                launcher.raiseIdle();
             }
 
-            if (gamepad2BActivated) {
-                telemetry.addLine("2B Activated");
-                if (gamepad2BTimer.time(TimeUnit.MILLISECONDS) >= 2250 && launcher.isAtPosition(Launcher.PUSH_LOCATION)) {
-                    launcher.resetFeed();
-                    gamepad2BActivated = false;
-                } else if (gamepad2BTimer.time(TimeUnit.MILLISECONDS) >= 1500) {
-                    launcher.pushFeed();
-                }
-            }
+            boolean gamepad2BPressed = gamepad2.b && !prevGamepad2B;
+//            if (gamepad2BPressed) {
+//                if (gamepad2BActivated) {
+//                    gamepad2BActivated = false;
+//                    // launcher.resetFeed();
+//                    launcher.feedIdle();
+//                } else {
+//                    gamepad2BActivated = true;
+//                    gamepad2BTimer.reset();
+//                    // launcher.lockFeed();
+//                    launcher.feedPushHalf();
+//                }
+//            }
+//
+//            if (gamepad2BActivated) {
+//                telemetry.addLine("2B Activated");
+//                /*launcher.isAtPosition(Launcher.PUSH_LOCATION)*/
+//                if (gamepad2BTimer.time(TimeUnit.MILLISECONDS) >= 2250
+//                        && launcher.feedIsAtPosition(Launcher.FeedPosition.FULL)) {
+//                    // launcher.resetFeed();
+//                    gamepad2BActivated = false;
+//                } else if (gamepad2BTimer.time(TimeUnit.MILLISECONDS) >= 1750) {
+//                    // launcher.pushFeed();
+//                    launcher.setFeedPosition(Launcher.FeedPosition.FULL);
+//                }
+//            }
+
+            prevGamepad2B = gamepad2.b;
 
             if (gamepad1.a && !prevGamepad1A) {
                 drivetrain.rotateControls();
@@ -116,7 +142,7 @@ public class RipTeleOp extends LinearOpMode {
 
             launcher.displayStatus();
 
-            telemetry.addData("Launcher RPM", launcher.getRpm());
+            // telemetry.addData("Launcher RPM", launcher.getRpm());
             telemetry.addData("Lift Position", liftCurrPos);
             odometry.update();
             odometry.log();
