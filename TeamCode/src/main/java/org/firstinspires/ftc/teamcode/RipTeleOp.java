@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-@TeleOp(name = "RIP TeleOp")
+@TeleOp(name = "RIP TeleOp [OLD]")
 public class RipTeleOp extends LinearOpMode {
     @Override
     public void runOpMode() {
@@ -42,7 +42,7 @@ public class RipTeleOp extends LinearOpMode {
 
             if (gamepad2.right_bumper) {
                 // launcher.start(gamepad2.a ? 1.0 : Launcher.BASELINE_POWER);
-                launcher.startFlywheel();
+                launcher.startFlywheel(0.0);
                 launcher.flywheelReady();
             } else if (gamepad2.left_bumper) {
                 launcher.reverseFlywheel();
@@ -52,19 +52,19 @@ public class RipTeleOp extends LinearOpMode {
 
             if (gamepad2.y) {
 //                launcher.pushFeed();
-                launcher.feedPushHalf();
+                // launcher.feedPushHalf();
             }
             else if (!gamepad2BActivated) {
                 //launcher.resetFeed();
-                launcher.feedIdle();
-                launcher.raiseIdle();
+                // launcher.feedIdle();
+                // launcher.raiseIdle();
             }
 
             if (gamepad2.b) {
-                launcher.raiseActivate();
+                // launcher.raiseActivate();
             }
             else {
-                launcher.raiseIdle();
+                // launcher.raiseIdle();
             }
 
             boolean gamepad2BPressed = gamepad2.b && !prevGamepad2B;

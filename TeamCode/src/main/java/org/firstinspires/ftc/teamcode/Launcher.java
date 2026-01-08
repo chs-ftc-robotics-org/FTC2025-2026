@@ -1,133 +1,20 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
-
-//public class Launcher {
-//    public static final double BASELINE_POWER = 0.7;
-//    public static final double IDEAL_RPM = 33.0;
-//
-//    private final DcMotorEx launcher;
-//
-//    /*
-//     * 0 => high (prep)
-//     * 1 => low (push)
-//     */
-//    private final Servo inputFeed;
-//    private final Servo ledIndicator;
-//
-//    private final double RED = 0.277;
-//    private final double ORANGE = 0.333;
-//    private final double GREEN = 0.500;
-//
-//    public Launcher(OpMode opMode) {
-//        HardwareMap map = opMode.hardwareMap;
-//        launcher = map.get(DcMotorEx.class, "launcher/motor");
-//        // launcherEnc = map.get(DcMotorEx.class, "launcher/motor");
-//        // launcher = map.get(Servo.class, "test/pwm");
-//        inputFeed = map.servo.get("launcher/feed");
-//        ledIndicator = map.servo.get("launcher/indicator");
-//
-//        // inputFeed.setPosition(0.15);
-//        // launcherEnc.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-//        ledIndicator.setPosition(0.000);
-//
-//        opMode.telemetry.addLine("Launcher initialized");
-//        opMode.telemetry.update();
-//    }
-//
-//    public void start(double power) {
-//        launcher.setPower(-power);
-//        // launcher.setPosition(0.5 + power);
-//    }
-//
-//    public void reverse() {
-//        launcher.setPower(1.0);
-//        // start(-1.0);
-//    }
-//
-//    public void stop() {
-//        launcher.setPower(0.0);
-//        // start(0.0);
-//    }
-//
-//    public double getRpm() {
-//        double ticksPerRev = launcher.getMotorType().getTicksPerRev();
-//        double ticksPerSecond = launcher.getVelocity();
-//        return Math.abs((ticksPerSecond / ticksPerRev) * 60.0);
-//    }
-//
-//    public void displayStatus() {
-//        double rpm = getRpm();
-//
-//        if (rpm == 0.0) {
-//            ledIndicator.setPosition(0.000);
-//        } else if (rpm < IDEAL_RPM) {
-//            ledIndicator.setPosition(ORANGE);
-//        } else {
-//            ledIndicator.setPosition(GREEN);
-//        }
-//    }
-//
-//    public static final double PUSH_LOCATION = 0.315;
-//    public static final double PREP_LOCATION = 0.2;
-//
-//    public void pushFeed() {
-//        // Slightly above 0 so that it's not in contact with the launch wheels
-//        // inputFeed.setPosition(0.2);
-//        inputFeed.setPosition(PUSH_LOCATION);
-//    }
-//
-//    public void lockFeed() {
-//        double t = 0.7;
-//        inputFeed.setPosition(PUSH_LOCATION * t + PREP_LOCATION * (1 - t));
-//    }
-//
-//    public void resetFeed() {
-//        // inputFeed.setPosition(0.315);
-//        inputFeed.setPosition(PREP_LOCATION);
-//    }
-//
-//    public boolean isAtPosition(double pos) {
-//        return inputFeed.getPosition() == pos;
-//    }
-//
-//    @TeleOp(name = "Launcher Test", group = "tests")
-//    public static class Test extends LinearOpMode {
-//        @Override
-//        public void runOpMode() {
-//            Launcher launcher = new Launcher(this);
-//
-//            waitForStart();
-//            while (opModeIsActive()) {
-//                if (gamepad1.right_bumper) {
-//                    launcher.start(0.9);
-//                }
-//                else {
-//                    launcher.stop();
-//                }
-//
-//                if (gamepad1.x) {
-//                    launcher.pushFeed();
-//                }
-//                if (gamepad1.y) {
-//                    launcher.resetFeed();
-//                }
-//            }
-//
-//            launcher.stop();
-//        }
-//    }
-//}
 
 public class Launcher {
     private final DcMotorEx motor;
-    private final Servo feed;
-    private final Servo raise;
+    private final Servo spin;
+    private final Servo lift;
     private final Servo indicator;
+    private final RevColorSensorV3 colorSensor;
 
     private final static double TARGET_VELOCITY = 1630;
 
@@ -145,21 +32,32 @@ public class Launcher {
         }
     }
 
+    public static final double FEED_POSITION_FULL = 0.315, FEED_POSITION_IDLE = 0.2, FEED_POSITION_HALF = 0.298;
+    public static final double LIFT_POSITION_UP = 0.4, LIFT_POSITION_DOWN = 0.7;
+    public static final double FLYWHEEL_POWER_NEAR = 0.78;
+    public static final double FLYWHEEL_POWER_FAR = 1.0;
+
+    public static final double SPIN_OFFSET = 0.05;
+
     public Launcher(OpMode opMode) {
         this.opMode = opMode;
         motor = opMode.hardwareMap.get(DcMotorEx.class, "launcher/motor");
-        raise = opMode.hardwareMap.get(Servo.class, "launcher/push");
-        feed = opMode.hardwareMap.get(Servo.class, "launcher/feed");
+        spin = opMode.hardwareMap.get(Servo.class, "launcher/spin");
+        lift = opMode.hardwareMap.get(Servo.class, "launcher/lift");
         indicator = opMode.hardwareMap.get(Servo.class, "launcher/indicator");
+        colorSensor = opMode.hardwareMap.get(RevColorSensorV3.class, "color");
 
         motor.setDirection(DcMotorSimple.Direction.REVERSE);
-        motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-//        motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-//        PIDFCoefficients baseline = new PIDFCoefficients(42, 0, 0, 12.247);
-//        motor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, baseline);
+        //motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        PIDFCoefficients baseline = new PIDFCoefficients(42, 0, 0, 12.247);
+        motor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, baseline);
 
-        raiseIdle();
-        setFeedPosition(FeedPosition.IDLE);
+        liftDown();
+        spinSetIndex(0);
+
+        // raiseIdle();
+        // setFeedPosition(FeedPosition.IDLE);
     }
 
     public void stopFlywheel() {
@@ -169,12 +67,12 @@ public class Launcher {
 
     public void reverseFlywheel() {
         // motor.setVelocity(-1000);
-        motor.setPower(-1.0);
+        motor.setPower(-0.8);
     }
 
-    public void startFlywheel() {
+    public void startFlywheel(double power) {
         // motor.setVelocity(TARGET_VELOCITY);
-        motor.setPower(1.0);
+        motor.setPower(power);
     }
 
     public boolean flywheelReady() {
@@ -183,43 +81,114 @@ public class Launcher {
         return Math.abs(motor.getVelocity() - TARGET_VELOCITY) < 60;
     }
 
-    public void setFeedPosition(FeedPosition pos) {
-        feed.setPosition(pos.raw);
+//    public void setFeedPosition(FeedPosition pos) {
+//        feed.setPosition(pos.raw);
+//    }
+//
+//    public void feedIdle() {
+//        setFeedPosition(FeedPosition.IDLE);
+//    }
+//
+//    public void feedPushFull() {
+//        setFeedPosition(FeedPosition.FULL);
+//    }
+//
+//    public void feedPushHalf() {
+//        setFeedPosition(FeedPosition.HALF);}
+//
+//    public boolean feedIsAtPosition(FeedPosition pos) {
+//        return Math.abs(feed.getPosition() - pos.raw) < 0.01;
+//    }
+
+    private boolean servoIsAtPos(Servo servo, double pos) {
+        return Math.abs(servo.getPosition() - pos) < 0.01;
     }
 
-    public void feedIdle() {
-        setFeedPosition(FeedPosition.IDLE);
+//    public boolean feedIsIdle() {
+//        return servoIsAtPos(feed, FEED_POSITION_IDLE);
+//    }
+//
+//    public boolean feedIsFullPush() {
+//        return servoIsAtPos(feed, FEED_POSITION_FULL);
+//    }
+//
+//    public boolean feedIsHalfPush() {
+//        return servoIsAtPos(feed, FEED_POSITION_HALF);
+//    }
+//
+//    public void raiseIdle() {
+//        raise.setPosition(RAISE_POSITION_IDLE);
+//    }
+//
+//    public void raiseActivate() {
+//        raise.setPosition(RAISE_POSITION_ACTIVE);
+//    }
+//
+//    public boolean raiseIsActive() {
+//        return servoIsAtPos(feed, RAISE_POSITION_ACTIVE);
+//    }
+//
+//    public boolean raiseIsIdle() {
+//        return servoIsAtPos(feed, RAISE_POSITION_IDLE);
+//    }
+
+    private Task servoToPosition(Servo servo, double position) {
+        Task check = Task.until(() -> servoIsAtPos(servo, position));
+        return Task.of(() -> servo.setPosition(position), check::run);
     }
 
-    public void feedPushFull() {
-        setFeedPosition(FeedPosition.FULL);
+//    public Task feedToPosition(double position) {
+//        return servoToPosition(this.feed, position);
+//    }
+//
+//    public Task raiseToPosition(double position) {
+//        return servoToPosition(this.raise, position);
+//    }
+
+    public void liftUp() {
+        lift.setPosition(LIFT_POSITION_UP);
     }
 
-    public void feedPushHalf() {
-        setFeedPosition(FeedPosition.HALF);}
-
-    public boolean feedIsAtPosition(FeedPosition pos) {
-        return Math.abs(feed.getPosition() - pos.raw) < 0.01;
+    public void liftDown() {
+        lift.setPosition(LIFT_POSITION_DOWN);
     }
 
-    public boolean feedIsIdle() {
-        return feedIsAtPosition(FeedPosition.IDLE);
+    private double spinPosition;
+    public void spinSetPosition(double position) {
+        position = Util.clamp(position, 0, 1);
+        spin.setPosition(position);
+        spinPosition = position;
     }
 
-    public boolean feedIsFullPush() {
-        return feedIsAtPosition(FeedPosition.FULL);
+    public void spinRotate(double x) {
+        spinSetPosition(spinPosition + x);
     }
 
-    public boolean feedIsHalfPush() {
-        return feedIsAtPosition(FeedPosition.HALF);
+    public double spinGetPosition() {
+        return spin.getPosition();
     }
 
-    public void raiseIdle() {
-        raise.setPosition(0.7);
+
+    private final static double[] spinPositions = {
+         0.0450,
+         0.0789,
+         0.1134,
+         0.1500,
+         0.1850,
+         0.2239,
+    };
+
+    private int spinIndex;
+    private void spinSetIndex(int n) {
+        spinIndex = n;
+
+        spinSetPosition(spinPositions[n]);
     }
 
-    public void raiseActivate() {
-        raise.setPosition(0.4);
+    public void spinAddIndex(int i) {
+        i = i % 6;
+        int n = (spinIndex + i + 6) % 6;
+        spinSetIndex(n);
     }
 
     public void displayStatus() {
@@ -234,4 +203,25 @@ public class Launcher {
             indicator.setPosition(0.5); // Green
         }
     }
+
+    public RevColorSensorV3 getColorSensor() {
+        return colorSensor;
+    }
+
+    enum Detection {
+        PURPLE,
+        GREEN,
+        EMPTY,
+    }
 }
+
+/*
+Launcher LED:
+Yellow: Revving
+Blue: Ready
+
+Spindexer LED:
+Red: No ball
+Green: Green ball ready to launch
+Purple: Green but Purple ball
+ */

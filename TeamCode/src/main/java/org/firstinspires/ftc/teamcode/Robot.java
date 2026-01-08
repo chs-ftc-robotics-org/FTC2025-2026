@@ -18,22 +18,23 @@ public class Robot {
         intake = new Intake(opMode);
         launcher = new Launcher(opMode);
 
+        odometry.reset(0, 0, 0);
+
         opMode.waitForStart();
     }
 
-    private final static Task.Running.Result CONTINUE = Task.CONTINUE;
-    private final static Task.Running.Result FINISH = Task.FINISH;
+    private final static Task.ControlFlow CONTINUE = Task.CONTINUE;
+    private final static Task.ControlFlow BREAK = Task.BREAK;
 
     public void runTask(Task task) {
-        Task.Running r = task.spawn();
         while (opMode.opModeIsActive()) {
             odometry.update();
-            Task.Running.Result result = r.run();
+            Task.ControlFlow result = task.run();
             odometry.log();
             launcher.displayStatus();
             opMode.telemetry.update();
 
-            if (result == FINISH) break;
+            if (result == BREAK) break;
         }
     }
 
@@ -53,7 +54,8 @@ public class Robot {
 
             double currentAngle = odometry.directionRaw();
             double targetAngle = Math.atan2(dy, dx);
-            double dt = targetAngle - (currentAngle * DEG_TO_RAD) + Math.PI;
+            // double dt = targetAngle - (currentAngle * DEG_TO_RAD) + Math.PI;
+            double dt = targetAngle + (currentAngle * DEG_TO_RAD) + Math.PI;
 
             double cos = Math.cos(dt);
             double sin = Math.sin(dt);
@@ -64,7 +66,7 @@ public class Robot {
 
             if (distance < DAMP_THRESHOLD / 4) {
                 drivetrain.move(0, 0, 0);
-                return FINISH;
+                return BREAK;
             }
 
             if (distance < DAMP_THRESHOLD) {
@@ -84,20 +86,15 @@ public class Robot {
     }
 
     public Task moveBy(double dx, double dy, double power) {
-        return () -> {
-            Box<Task.Running> running = Box.of(null);
+        Box<Double> x = Box.of(0.0);
+        Box<Double> y = Box.of(0.0);
 
-            return () -> {
-                if (running.get() == null) {
-                    double x = odometry.posX() + dx;
-                    double y = odometry.posY() + dy;
-                    running.set(moveTo(x, y, power).spawn());
-                    return CONTINUE;
-                }
-                return running.get().run();
-            };
+        Task delegate = this.moveTo(x.get(), y.get(), power);
 
-        };
+        return Task.of(() -> {
+            x.set(odometry.posX() + dx);
+            y.set(odometry.posY() + dy);
+        }, delegate::run);
     }
 
     public Task faceDir(double angle, double power) {
@@ -114,7 +111,7 @@ public class Robot {
             drivetrain.setFactor(power);
             if (Math.abs(normalized) < DAMP_THRESHOLD / 4) {
                 drivetrain.move(0, 0, 0);
-                return FINISH;
+                return BREAK;
             }
             if (Math.abs(normalized) < DAMP_THRESHOLD) {
                 double factor = normalized / DAMP_THRESHOLD;
@@ -128,60 +125,45 @@ public class Robot {
         });
     }
 
-    private Task prepLauncher(double rpm) {
-        return Task.until(() -> launcher.getRpm() >= rpm);
-    }
-
-    public Task launchSingle() {
-        return Task.sequence(
-                Task.once(launcher::resetFeed),
-                Task.once(() -> launcher.start(Launcher.BASELINE_POWER)),
-                prepLauncher(Launcher.IDEAL_RPM + 3),
-                Task.once(launcher::lockFeed),
-                Task.pause(1500),
-                prepLauncher(Launcher.IDEAL_RPM),
-                Task.once(launcher::pushFeed),
-                Task.until(() -> launcher.isAtPosition(Launcher.PUSH_LOCATION)),
-                Task.pause(750),
-                Task.once(() -> {
-                    launcher.stop();
-                    launcher.resetFeed();
-                })
-        );
-    }
-
-    private Task launchLastTwo() {
-        return Task.sequence(
-                Task.once(launcher::resetFeed),
-                Task.once(() -> launcher.start(Launcher.BASELINE_POWER)),
-                prepLauncher(Launcher.IDEAL_RPM + 3),
-                Task.once(launcher::lockFeed),
-                Task.pause(1500),
-                prepLauncher(Launcher.IDEAL_RPM + 1.5),
-                Task.once(launcher::pushFeed),
-                Task.until(() -> launcher.isAtPosition(Launcher.PUSH_LOCATION)),
-                Task.pause(750),
-                Task.once(() -> {
-                    launcher.stop();
-                    launcher.resetFeed();
-                })
-        );
-    }
-
-    public Task launchAll() {
-        return Task.sequence(
-                Task.once(launcher::resetFeed),
-                Task.once(() -> launcher.start(Launcher.BASELINE_POWER + 0.1)),
-                prepLauncher(Launcher.IDEAL_RPM + 3),
-                Task.once(intake::start),
-                Task.pause(250),
-                Task.once(intake::stop),
-                Task.once(launcher::stop),
-                Task.pause(500),
-                Task.once(intake::start),
-                Task.pause(500),
-                Task.once(intake::stop),
-                launchLastTwo()
-        );
-    }
+//    private Task launchLastTwo() {
+//        return Task.sequence(
+//                Task.once(launcher::feedIdle),
+//                Task.once(launcher::startFlywheel),
+//                Task.until(launcher::flywheelReady),
+//                Task.once(launcher::feedPushHalf),
+//                Task.pause(500),
+//                Task.until(launcher::flywheelReady),
+//                Task.once(launcher::feedPushFull),
+//                Task.until(launcher::feedIsFullPush),
+//                Task.pause(750),
+//                Task.once(launcher::feedIdle),
+//                Task.once(launcher::stopFlywheel)
+//        );
+//    }
+//
+//    public Task launchAll() {
+////        return Task.sequence(
+////                Task.once(launcher::resetFeed),
+////                Task.once(() -> launcher.start(Launcher.BASELINE_POWER + 0.1)),
+////                prepLauncher(Launcher.IDEAL_RPM + 1.5),
+////                Task.once(intake::start),
+////                Task.pause(250),
+////                Task.once(intake::stop),
+////                Task.once(launcher::stop),
+////                Task.pause(500),
+////                Task.once(intake::start),
+////                Task.pause(500),
+////                Task.once(intake::stop),
+////                launchLastTwo()
+////        );
+//        return Task.sequence(
+//                Task.once(launcher::feedIdle),
+//                Task.once(launcher::startFlywheel),
+//                Task.until(launcher::flywheelReady),
+//                Task.once(intake::start),
+//                Task.pause(250),
+//                Task.once(intake::stop),
+//                launchLastTwo()
+//        );
+//    }
 }
