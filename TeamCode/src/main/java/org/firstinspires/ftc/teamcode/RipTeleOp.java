@@ -1,13 +1,11 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
-@TeleOp(name = "RIP TeleOp [OLD]")
+//@TeleOp(name = "RIP TeleOp [OLD]")
 public class RipTeleOp extends LinearOpMode {
     @Override
     public void runOpMode() {
@@ -140,7 +138,7 @@ public class RipTeleOp extends LinearOpMode {
                 }
             }
 
-            launcher.displayStatus();
+            launcher.displayRpmStatus();
 
             // telemetry.addData("Launcher RPM", launcher.getRpm());
             telemetry.addData("Lift Position", liftCurrPos);

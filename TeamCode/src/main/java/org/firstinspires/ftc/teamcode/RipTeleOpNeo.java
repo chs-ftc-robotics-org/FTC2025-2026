@@ -1,12 +1,13 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.Servo;
 
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-
+/*
+1. LED for Color Sensor (ball)
+2. LED for launcher rev
+3. Garage Door functions (gamepad1.dpad)
+ */
 @TeleOp(name = "RIP TeleOp [NEW]")
 public class RipTeleOpNeo extends LinearOpMode {
     @Override
@@ -31,7 +32,8 @@ public class RipTeleOpNeo extends LinearOpMode {
 //            }
 
             if (gamepad1.right_bumper || gamepad2.right_trigger > 0.1) {
-                r.intake.start();
+                if (r.launcher.readyToIntake())
+                    r.intake.start();
             }
             else if (gamepad1.left_bumper || gamepad2.left_trigger > 0.1) {
                 r.intake.reverse();
@@ -45,6 +47,13 @@ public class RipTeleOpNeo extends LinearOpMode {
             }
             else {
                 r.launcher.liftDown();
+            }
+
+            if (gamepad1.dpadLeftWasPressed()) {
+                r.launcher.garageDoorRotate(-0.01);
+            }
+            else if (gamepad1.dpadRightWasPressed()) {
+                r.launcher.garageDoorRotate(0.01);
             }
             
             if (gamepad2.dpadLeftWasPressed()) {
@@ -71,11 +80,27 @@ public class RipTeleOpNeo extends LinearOpMode {
                 r.launcher.stopFlywheel();
             }
 
+            if (r.launcher.getLiftUp()) {
+                r.launcher.setBallStatusDisplay(Launcher.BallDetection.EMPTY);
+            } else {
+                r.launcher.displayBallStatus();
+            }
+
+            if (gamepad1.dpadUpWasPressed()) {
+                r.launcher.garageDoorSetState(1);
+            } else if (gamepad1.dpadDownWasPressed()) {
+                r.launcher.garageDoorSetState(0);
+            }
+
+            telemetry.addData("Garage position", r.launcher.garageDoorGetPosition());
             telemetry.addData("Spindexer position", r.launcher.spinGetPosition());
 
-            RevColorSensorV3 cs = r.launcher.getColorSensor();
-            telemetry.addData("Detected color", "rgb(%d, %d, %d)", cs.red(), cs.green(), cs.blue());
-            telemetry.addData("Proximity", cs.getDistance(DistanceUnit.MM));
+            Hsv cs = r.launcher.getDetectedColorValues();
+            telemetry.addData("Detected color", "hsv(%f, %f, %f)", cs.h, cs.s, cs.v);
+            telemetry.addData("Proximity", r.launcher.getProximity());
+            telemetry.addData("Detected Ball Color", r.launcher.getDetectedBall().name());
+
+            telemetry.addData("Intake Fin Pressed", r.launcher.intakeFinIsPressed());
 
             return Task.CONTINUE;
         });

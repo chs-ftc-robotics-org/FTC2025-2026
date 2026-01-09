@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 @SuppressWarnings("unused")
-@TeleOp(name = "Motor Test")
+@TeleOp(name = "Motor Test", group = "tests")
 public class OpMotorTest extends LinearOpMode {
     @Override
     public void runOpMode() {

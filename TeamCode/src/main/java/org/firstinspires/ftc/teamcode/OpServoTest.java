@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-@TeleOp(name = "Servo Test")
+@TeleOp(name = "Servo Test", group = "tests")
 public class OpServoTest extends LinearOpMode {
     public void runOpMode() {
         Servo servo = hardwareMap.servo.get("ctl/servo1");

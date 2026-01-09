@@ -31,7 +31,7 @@ public class Robot {
             odometry.update();
             Task.ControlFlow result = task.run();
             odometry.log();
-            launcher.displayStatus();
+            launcher.displayRpmStatus();
             opMode.telemetry.update();
 
             if (result == BREAK) break;
