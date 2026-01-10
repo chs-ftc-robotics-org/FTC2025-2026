@@ -16,7 +16,7 @@ public class Robot {
 
     private final LinearOpMode opMode;
 
-    public Robot(LinearOpMode opMode) {
+    public Robot(LinearOpMode opMode, double startingAngle) {
         this.opMode = opMode;
 
         drivetrain = new Drivetrain(opMode);
@@ -25,7 +25,7 @@ public class Robot {
         launcher = new Launcher(opMode);
         camera = opMode.hardwareMap.get(Limelight3A.class, "camera");
 
-        odometry.reset(0, 0, 0);
+        odometry.reset(0, 0, startingAngle);
 
         opMode.waitForStart();
     }
@@ -139,8 +139,7 @@ public class Robot {
                 Task.pause(500),
                 Task.once(launcher::liftDown),
                 Task.pause(500),
-                Task.once(() -> launcher.spinAddIndex(2)),
-                Task.pause(1000)
+                launcher.addSpinIndexAndWait(2)
         );
     }
 
@@ -152,7 +151,8 @@ public class Robot {
                 // Green 1 --> 1
                 // Green 2 --> 5
                 // TODO: handle different green position
-                Task.once(() -> launcher.spinSetIndex(3 - 2 * this.motif.get())),
+
+                Task.lazy(() -> launcher.setSpinIndexAndWait(3 - 2 * this.motif.get())),
                 Task.once(launcher::flywheelStart),
                 launchOne(),
                 launchOne(),
@@ -164,7 +164,7 @@ public class Robot {
     public Task fetchMotif() {
         return Task.sequence(
                 Task.once(camera::start),
-                Task.pause(500),
+                Task.pause(250),
                 Task.until(() -> {
                     LLResult result = camera.getLatestResult();
                     if (result == null || !result.isValid()) return false;

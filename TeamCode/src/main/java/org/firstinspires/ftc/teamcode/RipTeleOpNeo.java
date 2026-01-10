@@ -12,7 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 public class RipTeleOpNeo extends LinearOpMode {
     @Override
     public void runOpMode() {
-        Robot r = new Robot(this);
+        Robot r = new Robot(this, 0);
 
         Task.Pool pool = new Task.Pool();
 

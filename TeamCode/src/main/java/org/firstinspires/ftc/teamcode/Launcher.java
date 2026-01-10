@@ -134,21 +134,23 @@ public class Launcher {
     };
 
     private int spinIndex;
-    public void spinSetIndex(int n) {
+    public int spinSetIndex(int n) {
         n = (n + 6) % 6;
+        int oldIndex = spinIndex;
         spinIndex = n;
 
         spinSetPosition(spinPositions[n]);
+        return Math.abs(spinIndex - oldIndex);
     }
 
     public int spinGetIndex() {
         return spinIndex;
     }
 
-    public void spinAddIndex(int i) {
+    public int spinAddIndex(int i) {
         i = i % 6;
         int n = (spinIndex + i + 6) % 6;
-        spinSetIndex(n);
+        return spinSetIndex(n);
     }
 
     public double getRpm() {
@@ -174,7 +176,7 @@ public class Launcher {
 
     public void displayBallStatus() {
         BallDetection detected = getDetectedBall();
-        setBallStatusDisplay(detected);
+        setBallStatusDisplay(readyToLift() ? detected : BallDetection.EMPTY);
     }
 
     public void setBallStatusDisplay(BallDetection b) {
@@ -290,7 +292,8 @@ public class Launcher {
         DEFAULT(GARAGE_POSITION_NEAR, 0.80, 40),
         NEAR(GARAGE_POSITION_NEAR, 0.75, 37),
         FAR(GARAGE_POSITION_FAR, 1.0, 50),
-        AUTONOMOUS(GARAGE_POSITION_NEAR, 0.70, 34);
+        AUTONOMOUS(GARAGE_POSITION_NEAR, 0.70, 34),
+        AUTONOMOUS_FAR(0.3189, 0.95, 47);
 
         private final double garagePos;
         private final double power;
@@ -307,6 +310,22 @@ public class Launcher {
     public void setLaunchProfile(LaunchProfile profile) {
         garageDoorSetPosition(profile.garagePos);
         this.launchProfile = profile;
+    }
+
+    public Task setSpinIndexAndWait(int n) {
+        Box.Int diff = Box.Int.of(0);
+        return Task.sequence(
+                Task.once(() -> diff.set(Launcher.this.spinSetIndex(n))),
+                Task.lazy(() -> Task.pause(300 * diff.get()))
+        );
+    }
+
+    public Task addSpinIndexAndWait(int i) {
+        Box.Int diff = Box.Int.of(0);
+        return Task.sequence(
+                Task.once(() -> diff.set(Launcher.this.spinAddIndex(i))),
+                Task.lazy(() -> Task.pause(300 * diff.get()))
+        );
     }
 }
 

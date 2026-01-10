@@ -69,6 +69,11 @@ public class Task {
         return Task.of(() -> {}, r);
     }
 
+    static Task lazy(Supplier<Task> f) {
+        Box<Task> delegate = Box.of(null);
+        return Task.of(() -> delegate.set(f.get()), () -> delegate.get().run());
+    }
+
     static Task pause(int millis) {
         ElapsedTime time = new ElapsedTime();
         return Task.of(time::reset, () -> (time.time(TimeUnit.MILLISECONDS) >= millis) ? BREAK : CONTINUE);
