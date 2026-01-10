@@ -2,7 +2,9 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -126,11 +128,13 @@ public class Task {
 
     static Task pool(Pool pool) {
         return Task.of(() -> {
+            List<String> toRemove = new ArrayList<>();
             pool.tasks.forEach((name, task) -> {
                 if (task.run() == BREAK) {
-                    pool.tasks.remove(name);
+                    toRemove.add(name);
                 }
             });
+            toRemove.forEach(pool.tasks::remove);
             return CONTINUE;
         });
     }

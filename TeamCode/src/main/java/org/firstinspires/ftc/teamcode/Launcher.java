@@ -7,7 +7,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
@@ -19,7 +18,6 @@ public class Launcher {
     private final Servo rpmIndicator;
     private final Servo launchBallIndicator;
     private final RevColorSensorV3 colorSensor;
-    private final TouchSensor intakeFin;
 
     private final static double TARGET_VELOCITY = 1630;
     private final OpMode opMode;
@@ -38,7 +36,6 @@ public class Launcher {
         rpmIndicator = opMode.hardwareMap.get(Servo.class, "launcher/rpmIndicator");
         launchBallIndicator = opMode.hardwareMap.get(Servo.class, "launcher/ballColor");
         colorSensor = opMode.hardwareMap.get(RevColorSensorV3.class, "color");
-        intakeFin = opMode.hardwareMap.get(TouchSensor.class, "touch");
 
         motor.setDirection(DcMotorSimple.Direction.REVERSE);
         // motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -48,7 +45,7 @@ public class Launcher {
 
         liftDown();
         spinSetIndex(0);
-        garageDoorSetState(0);
+        setLaunchProfile(LaunchProfile.DEFAULT);
 
         // raiseIdle();
         // setFeedPosition(FeedPosition.IDLE);
@@ -69,10 +66,19 @@ public class Launcher {
         motor.setPower(power);
     }
 
-    public boolean flywheelReady() {
+    public void flywheelStart() {
+        motor.setPower(launchProfile.power);
+    }
+
+    public boolean flywheelReadyOld() {
         opMode.telemetry.addData("Velocity", motor.getVelocity());
         opMode.telemetry.addData("Error", TARGET_VELOCITY - motor.getVelocity());
         return Math.abs(motor.getVelocity() - TARGET_VELOCITY) < 60;
+    }
+
+    public boolean flywheelReady() {
+        double rpm = getRpm();
+        return Math.abs(rpm - launchProfile.rpm) < 2;
     }
 
     private boolean servoIsAtPos(Servo servo, double pos) {
@@ -87,7 +93,7 @@ public class Launcher {
     private boolean liftIsUp;
 
     public void liftUp() {
-        if (!readyToLift()) return;
+        if (!readyToLift() && !spinIsMoving()) return;
         liftIsUp = true;
         lift.setPosition(LIFT_POSITION_UP);
     }
@@ -119,25 +125,36 @@ public class Launcher {
     }
 
     private final static double[] spinPositions = {
-         0.0450,
-         0.0767,
+         0.0450, // intake
+         0.0767, // launch
          0.1134,
          0.1528,
          0.1850,
-         0.2239,
+         0.2250,
     };
 
     private int spinIndex;
-    private void spinSetIndex(int n) {
+    public void spinSetIndex(int n) {
+        n = (n + 6) % 6;
         spinIndex = n;
 
         spinSetPosition(spinPositions[n]);
+    }
+
+    public int spinGetIndex() {
+        return spinIndex;
     }
 
     public void spinAddIndex(int i) {
         i = i % 6;
         int n = (spinIndex + i + 6) % 6;
         spinSetIndex(n);
+    }
+
+    public double getRpm() {
+        double ticksPerRev = motor.getMotorType().getTicksPerRev();
+        double ticksPerSecond = motor.getVelocity();
+        return Math.abs((ticksPerSecond / ticksPerRev) * 60.0);
     }
 
     public void displayRpmStatus() {
@@ -149,7 +166,9 @@ public class Launcher {
             rpmIndicator.setPosition(0.333); // Orange
         }
         else {
-            rpmIndicator.setPosition(0.611); // Blue
+            double blue = 0.611;
+            double red = 0.3;
+            rpmIndicator.setPosition(launchProfile == LaunchProfile.NEAR ? red : blue); // Blue
         }
     }
 
@@ -179,7 +198,7 @@ public class Launcher {
     }
 
     private static final double GARAGE_POSITION_MAX = 0.7294;
-    private static final double GARAGE_POSITION_MIN = 0.3194;
+    private static final double GARAGE_POSITION_MIN = 0.2950;
 
     public double garageDoorGetPosition() {
         return garageDoor.getPosition();
@@ -194,26 +213,6 @@ public class Launcher {
         garageDoorSetPosition(newPos);
     }
 
-    private int garageState;
-    private final static double[] garageStatePositions = {
-            0.7294,
-            0.3194,
-    };
-
-    public void garageDoorSetState(int n) {
-        garageState = n % garageStatePositions.length;
-
-        garageDoorSetPosition(garageStatePositions[garageState]);
-    }
-
-    public void garageDoorSwitchPosition() {
-        garageDoorSetState(garageState + 1);
-    }
-
-//    public RevColorSensorV3 getColorSensor() {
-//        return colorSensor;
-//    }
-
     public Hsv getDetectedColorValues() {
         return new Rgb((short) colorSensor.red(), (short) colorSensor.green(), (short) colorSensor.blue()).toHsv();
     }
@@ -222,7 +221,7 @@ public class Launcher {
         return colorSensor.getDistance(DistanceUnit.MM);
     }
 
-    enum BallDetection {
+    public enum BallDetection {
         PURPLE,
         GREEN,
         EMPTY,
@@ -246,12 +245,68 @@ public class Launcher {
         }
     }
 
+    public enum SpinMode {
+        INTAKE,
+        LAUNCH
+    }
+
+    private SpinMode spinMode = SpinMode.INTAKE;
+    public void spinSetMode(SpinMode mode) {
+        spinMode = mode;
+        if (!spinIsReadyFor(mode)) spinAddIndex(1);
+    }
+
+    public boolean spinIsReadyFor(SpinMode mode) {
+        switch (mode) {
+            case INTAKE:
+                return readyToIntake();
+            case LAUNCH:
+                return readyToLift();
+            default:
+                return false;
+        }
+    }
+
+    public void spinNext() {
+        spinAddIndex(spinIsReadyFor(spinMode) ? 2 : 1);
+    }
+
+    public void spinPrev() {
+        spinAddIndex(spinIsReadyFor(spinMode) ? -2 : -1);
+    }
+
+    public boolean spinIsMoving() {
+        return Math.abs(spin.getPosition() - spinPositions[spinIndex]) > 0.001;
+    }
+
     // GREEN: 160, 0.63, 0.60; 44 mm
     // PURPLE: 212, 0.44, 0.56; 44 mm
     // BLANK: 170, 0.43, 0.28; 64 mm
 
-    public boolean intakeFinIsPressed() {
-        return intakeFin.isPressed();
+    private static final double GARAGE_POSITION_NEAR = 0.7294;
+    private static final double GARAGE_POSITION_FAR = 0.3289;
+
+    public enum LaunchProfile {
+        DEFAULT(GARAGE_POSITION_NEAR, 0.80, 40),
+        NEAR(GARAGE_POSITION_NEAR, 0.75, 37),
+        FAR(GARAGE_POSITION_FAR, 1.0, 50),
+        AUTONOMOUS(GARAGE_POSITION_NEAR, 0.70, 34);
+
+        private final double garagePos;
+        private final double power;
+        private final double rpm;
+
+        LaunchProfile(double garagePos, double power, double rpm) {
+            this.garagePos = garagePos;
+            this.power = power;
+            this.rpm = rpm;
+        }
+    }
+
+    private LaunchProfile launchProfile = LaunchProfile.DEFAULT;
+    public void setLaunchProfile(LaunchProfile profile) {
+        garageDoorSetPosition(profile.garagePos);
+        this.launchProfile = profile;
     }
 }
 

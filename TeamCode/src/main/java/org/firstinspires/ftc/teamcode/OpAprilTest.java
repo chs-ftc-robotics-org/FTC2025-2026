@@ -24,7 +24,7 @@ public class OpAprilTest extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        webcam = hardwareMap.get(Limelight3A.class, "webcam");
+        webcam = hardwareMap.get(Limelight3A.class, "camera");
         
         // AprilTagProcessor aprilProcessor = AprilTagProcessor.easyCreateWithDefaults();
         // @SuppressWarnings("unused")
@@ -74,13 +74,12 @@ public class OpAprilTest extends LinearOpMode {
     }
 
     private static String displayTagInfo(LLResultTypes.FiducialResult result) {
-        Pose3D pose = result.getTargetPoseCameraSpace();
         // Position p = pose.getPosition();
         // YawPitchRollAngles orientation = pose.getOrientation();
         return String.format(
                 Locale.ENGLISH,
-                "{ id: %d, info: %s }",
-                result.getFiducialId(), pose.toString()
+                "{ id: %d, tx: %f, ty: %f }",
+                result.getFiducialId(), result.getTargetXDegrees(), result.getTargetYDegrees()
         );
     }
 }

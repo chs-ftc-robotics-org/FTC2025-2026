@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 public class Robot {
@@ -7,8 +10,11 @@ public class Robot {
     public final Odometry odometry;
     public final Intake intake;
     public final Launcher launcher;
+    public final Limelight3A camera;
 
-    private LinearOpMode opMode;
+    public final Box.Int motif = Box.Int.of(0);
+
+    private final LinearOpMode opMode;
 
     public Robot(LinearOpMode opMode) {
         this.opMode = opMode;
@@ -17,6 +23,7 @@ public class Robot {
         odometry = new Odometry(opMode);
         intake = new Intake(opMode);
         launcher = new Launcher(opMode);
+        camera = opMode.hardwareMap.get(Limelight3A.class, "camera");
 
         odometry.reset(0, 0, 0);
 
@@ -32,6 +39,8 @@ public class Robot {
             Task.ControlFlow result = task.run();
             odometry.log();
             launcher.displayRpmStatus();
+            opMode.telemetry.addData("Motif", motif.get());
+            opMode.telemetry.addData("Spin index", launcher.spinGetIndex());
             opMode.telemetry.update();
 
             if (result == BREAK) break;
@@ -86,15 +95,13 @@ public class Robot {
     }
 
     public Task moveBy(double dx, double dy, double power) {
-        Box<Double> x = Box.of(0.0);
-        Box<Double> y = Box.of(0.0);
-
-        Task delegate = this.moveTo(x.get(), y.get(), power);
+        Box<Task> delegate = Box.of(null);
 
         return Task.of(() -> {
-            x.set(odometry.posX() + dx);
-            y.set(odometry.posY() + dy);
-        }, delegate::run);
+            double x = odometry.posX() + dx;
+            double y = odometry.posY() + dy;
+            delegate.set(this.moveTo(x, y, power));
+        }, () -> delegate.get().run());
     }
 
     public Task faceDir(double angle, double power) {
@@ -125,45 +132,52 @@ public class Robot {
         });
     }
 
-//    private Task launchLastTwo() {
-//        return Task.sequence(
-//                Task.once(launcher::feedIdle),
-//                Task.once(launcher::startFlywheel),
-//                Task.until(launcher::flywheelReady),
-//                Task.once(launcher::feedPushHalf),
-//                Task.pause(500),
-//                Task.until(launcher::flywheelReady),
-//                Task.once(launcher::feedPushFull),
-//                Task.until(launcher::feedIsFullPush),
-//                Task.pause(750),
-//                Task.once(launcher::feedIdle),
-//                Task.once(launcher::stopFlywheel)
-//        );
-//    }
-//
-//    public Task launchAll() {
-////        return Task.sequence(
-////                Task.once(launcher::resetFeed),
-////                Task.once(() -> launcher.start(Launcher.BASELINE_POWER + 0.1)),
-////                prepLauncher(Launcher.IDEAL_RPM + 1.5),
-////                Task.once(intake::start),
-////                Task.pause(250),
-////                Task.once(intake::stop),
-////                Task.once(launcher::stop),
-////                Task.pause(500),
-////                Task.once(intake::start),
-////                Task.pause(500),
-////                Task.once(intake::stop),
-////                launchLastTwo()
-////        );
-//        return Task.sequence(
-//                Task.once(launcher::feedIdle),
-//                Task.once(launcher::startFlywheel),
-//                Task.until(launcher::flywheelReady),
-//                Task.once(intake::start),
-//                Task.pause(250),
-//                Task.once(intake::stop),
-//                launchLastTwo()
-//        );
-//    }
+    public Task launchOne() {
+        return Task.sequence(
+                Task.until(launcher::flywheelReady),
+                Task.once(launcher::liftUp),
+                Task.pause(500),
+                Task.once(launcher::liftDown),
+                Task.pause(500),
+                Task.once(() -> launcher.spinAddIndex(2)),
+                Task.pause(1000)
+        );
+    }
+
+    public Task launchMotif() {
+
+        return Task.sequence(
+                // Task.once(() -> launcher.spinSetMode(Launcher.SpinMode.LAUNCH)),
+                // Green 0 --> 3
+                // Green 1 --> 1
+                // Green 2 --> 5
+                // TODO: handle different green position
+                Task.once(() -> launcher.spinSetIndex(3 - 2 * this.motif.get())),
+                Task.once(launcher::flywheelStart),
+                launchOne(),
+                launchOne(),
+                launchOne(),
+                Task.once(launcher::stopFlywheel)
+        );
+    }
+
+    public Task fetchMotif() {
+        return Task.sequence(
+                Task.once(camera::start),
+                Task.pause(500),
+                Task.until(() -> {
+                    LLResult result = camera.getLatestResult();
+                    if (result == null || !result.isValid()) return false;
+                    for (LLResultTypes.FiducialResult detection : result.getFiducialResults()) {
+                        int id = detection.getFiducialId();
+                        if (id >= 21 && id <= 23) {
+                            motif.set(id % 20 - 1);
+                            return true;
+                        }
+                    }
+                    return false;
+                }),
+                Task.once(camera::stop)
+        );
+    }
 }
