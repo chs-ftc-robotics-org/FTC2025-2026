@@ -49,4 +49,44 @@ public class Box<T> {
             f.run(); // prints 1
         }
     }
+
+    public static class Int {
+        int inner;
+
+        private Int() {}
+
+        public static Int of(int x) {
+            Int box = new Int();
+            box.inner = x;
+            return box;
+        }
+
+        public int get() {
+            return inner;
+        }
+
+        public void set(int x) {
+            inner = x;
+        }
+    }
+
+    public static class Double {
+        double inner;
+
+        private Double() {}
+
+        public static Double of(double x) {
+            Double box = new Double();
+            box.inner = x;
+            return box;
+        }
+
+        public double get() {
+            return inner;
+        }
+
+        public void set(double x) {
+            inner = x;
+        }
+    }
 }
