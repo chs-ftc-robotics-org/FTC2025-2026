@@ -3,35 +3,58 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+
 import java.util.function.Function;
 
 public class RipAutonomous {
+    private static void basicGoalSide(LinearOpMode opMode, double side) {
+        Robot r = new Robot(opMode, 0);
+        Task t = Task.sequence(
+                r.moveBy(side * 25, -35, 0.6),
+                r.faceDir(side * 10, 0.6),
+                r.fetchMotif(),
+                r.faceDir(side * -45, 0.6),
+                Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS)),
+                r.launchMotif(),
+                r.moveBy(side * -16, -16, 0.5)
+                // r.faceDir(sign * -90, 0.45),
+                //r.moveBy(0, -13, 0.6)
+                // Task.once(() -> r.launcher.spinSetIndex(0)),
+                // Task.once(r.intake::start),
+                // rawMove(r, -0.3, x -> x < 4),
+                // r.launcher.addSpinIndexAndWait(2),
+                // rawMove(r, -0.3, x -> x < 0),
+                // r.launcher.addSpinIndexAndWait(2),
+                // rawMove(r, -0.3, x -> x < -4),
+                // r.moveBy(30, 13, 0.6),
+                // Task.once(r.intake::stop)
+                //r.moveBy(-24, -24, 0.5)
+        );
+        r.runTask(t);
+    }
+
+    private static void basicParkingSide(LinearOpMode opMode, double side) {
+        Robot r = new Robot(opMode, 0);
+        Task t = Task.sequence(
+                r.fetchMotif(),
+                Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS_FAR)),
+                r.moveBy(0, 1.5, 0.3),
+                r.faceDir(side * -25, 0.3),
+                r.launchMotif(),
+                r.moveBy(side * -20, 20, 0.4)
+        );
+        r.runTask(t);
+    }
+
+    private static final double RED_SIDE = 1.0;
+    private static final double BLUE_SIDE = -1.0;
+
     @Autonomous(name = "Red Goal")
     public static class RedNear extends LinearOpMode {
         @Override
         public void runOpMode() {
-            Robot r = new Robot(this, 0);
-            Task t = Task.sequence(
-                    r.moveBy(25, -35, 0.6),
-                    r.faceDir(10, 0.6),
-                    r.fetchMotif(),
-                    r.faceDir(-45, 0.6),
-                    Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS)),
-                    r.launchMotif(),
-                    r.faceDir(-90, 0.45),
-                    r.moveBy(0, -13, 0.6)
-                    // Task.once(() -> r.launcher.spinSetIndex(0)),
-                    // Task.once(r.intake::start),
-                    // rawMove(r, -0.3, x -> x < 4),
-                    // r.launcher.addSpinIndexAndWait(2),
-                    // rawMove(r, -0.3, x -> x < 0),
-                    // r.launcher.addSpinIndexAndWait(2),
-                    // rawMove(r, -0.3, x -> x < -4),
-                    // r.moveBy(30, 13, 0.6),
-                    // Task.once(r.intake::stop)
-                    //r.moveBy(-24, -24, 0.5)
-            );
-            r.runTask(t);
+            basicGoalSide(this, 1.0);
         }
     }
 
@@ -39,16 +62,23 @@ public class RipAutonomous {
     public static class RedFar extends LinearOpMode {
         @Override
         public void runOpMode() {
-            Robot r = new Robot(this, 0);
-            Task t = Task.sequence(
-                    r.fetchMotif(),
-                    Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS_FAR)),
-                    r.moveBy(0, 1.5, 0.3),
-                    r.faceDir(-25, 0.3),
-                    r.launchMotif(),
-                    r.moveBy(-20, 20, 0.4)
-            );
-            r.runTask(t);
+            basicParkingSide(this, 1.0);
+        }
+    }
+
+    @Autonomous(name = "Blue Goal")
+    public static class BlueNear extends LinearOpMode {
+        @Override
+        public void runOpMode() {
+            basicGoalSide(this, -1.0);
+        }
+    }
+
+    @Autonomous(name = "Blue Parking")
+    public static class BlueFar extends LinearOpMode {
+        @Override
+        public void runOpMode() {
+            basicParkingSide(this, -1.0);
         }
     }
 
