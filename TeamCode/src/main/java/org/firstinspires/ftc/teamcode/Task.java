@@ -133,13 +133,14 @@ public class Task {
 
     static Task pool(Pool pool) {
         return Task.of(() -> {
-            List<String> toRemove = new ArrayList<>();
+            // List<String> toRemove = new ArrayList<>();
             pool.tasks.forEach((name, task) -> {
-                if (task.run() == BREAK) {
-                    toRemove.add(name);
-                }
+                task.run();
+//                if (task.run() == BREAK) {
+//                    toRemove.add(name);
+//                }
             });
-            toRemove.forEach(pool.tasks::remove);
+            // toRemove.forEach(pool.tasks::remove);
             return CONTINUE;
         });
     }
@@ -148,8 +149,9 @@ public class Task {
         private final HashMap<String, Task> tasks = new HashMap<>();
 
         public void tryAdd(String name, Task task) {
-            if (has(name)) return;
-            tasks.put(name, task);
+            forceAdd(name, task);
+            //if (has(name)) return;
+            //tasks.put(name, task);
         }
 
         public void forceAdd(String name, Task task) {
@@ -161,7 +163,7 @@ public class Task {
         }
 
         public void remove(String name) {
-            Task removed = tasks.remove(name);
+            Task removed = tasks.get(name);
             if (removed != null) removed.cancel();
         }
 

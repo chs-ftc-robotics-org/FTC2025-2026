@@ -11,7 +11,7 @@ public class RipTeleOp extends LinearOpMode {
     public void runOpMode() {
         Drivetrain drivetrain = new Drivetrain(this);
         Intake intake = new Intake(this);
-        Launcher launcher = new Launcher(this);
+        Launcher launcher = new Launcher(this, null);
         Lift lift = new Lift(this);
         Odometry odometry = new Odometry(this);
         odometry.reset(24, 0, 0);

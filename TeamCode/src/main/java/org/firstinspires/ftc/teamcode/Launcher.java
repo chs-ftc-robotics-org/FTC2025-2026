@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class Launcher {
+    private final Robot robot;
     private final DcMotorEx motor;
     private final Servo spin;
     private final Servo lift;
@@ -27,7 +28,11 @@ public class Launcher {
 
     public static final double SPIN_OFFSET = 0.05;
 
-    public Launcher(OpMode opMode) {
+    private static boolean spindexerLocked = false;
+    private static boolean liftArmLocked = false;
+
+    public Launcher(OpMode opMode, Robot r) {
+        robot = r;
         this.opMode = opMode;
         motor = opMode.hardwareMap.get(DcMotorEx.class, "launcher/motor");
         spin = opMode.hardwareMap.get(Servo.class, "launcher/spin");
@@ -58,15 +63,18 @@ public class Launcher {
 
     public void reverseFlywheel() {
         // motor.setVelocity(-1000);
+        spinSetMode(SpinMode.LAUNCH);
         motor.setPower(-0.8);
     }
 
     public void startFlywheel(double power) {
+        spinSetMode(SpinMode.LAUNCH);
         // motor.setVelocity(TARGET_VELOCITY);
         motor.setPower(power);
     }
 
     public void flywheelStart() {
+        spinSetMode(SpinMode.LAUNCH);
         motor.setPower(launchProfile.power);
     }
 
@@ -93,7 +101,8 @@ public class Launcher {
     private boolean liftIsUp;
 
     public void liftUp() {
-        if (!readyToLift() && !spinIsMoving()) return;
+        if (!readyToLift()) return;
+        spindexerLocked = true;
         liftIsUp = true;
         lift.setPosition(LIFT_POSITION_UP);
     }
@@ -101,6 +110,7 @@ public class Launcher {
     public void liftDown() {
         lift.setPosition(LIFT_POSITION_DOWN);
         liftIsUp = false;
+        robot.pool.tryAdd("FreeSpindexer", Task.sequence(Task.pause(500), Task.once(() -> spindexerLocked = false)));
     }
 
     public boolean getLiftUp() {
@@ -135,12 +145,20 @@ public class Launcher {
 
     private int spinIndex;
     public int spinSetIndex(int n) {
+        // if (spindexerLocked) return 0;
+        liftArmLocked = true;
+
         n = (n + 6) % 6;
         int oldIndex = spinIndex;
         spinIndex = n;
 
         spinSetPosition(spinPositions[n]);
-        return Math.abs(spinIndex - oldIndex);
+
+        int idxDiff = Math.abs(spinIndex - oldIndex);
+
+        robot.pool.tryAdd("FreeLiftArm", Task.sequence(Task.pause(350 * idxDiff), Task.once(() -> liftArmLocked = false)));
+
+        return idxDiff;
     }
 
     public int spinGetIndex() {
@@ -293,7 +311,7 @@ public class Launcher {
         NEAR(GARAGE_POSITION_NEAR, 0.75, 37),
         FAR(GARAGE_POSITION_FAR, 1.0, 50),
         AUTONOMOUS(GARAGE_POSITION_NEAR, 0.70, 34),
-        AUTONOMOUS_FAR(0.3189, 0.95, 47);
+        AUTONOMOUS_FAR(0.3189, 1.0, 50);
 
         private final double garagePos;
         private final double power;
@@ -315,6 +333,7 @@ public class Launcher {
     public Task setSpinIndexAndWait(int n) {
         Box.Int diff = Box.Int.of(0);
         return Task.sequence(
+                // Task.until(() -> !spindexerLocked),
                 Task.once(() -> diff.set(Launcher.this.spinSetIndex(n))),
                 Task.lazy(() -> Task.pause(300 * diff.get()))
         );
@@ -323,6 +342,7 @@ public class Launcher {
     public Task addSpinIndexAndWait(int i) {
         Box.Int diff = Box.Int.of(0);
         return Task.sequence(
+                // Task.until(() -> !spindexerLocked),
                 Task.once(() -> diff.set(Launcher.this.spinAddIndex(i))),
                 Task.lazy(() -> Task.pause(300 * diff.get()))
         );

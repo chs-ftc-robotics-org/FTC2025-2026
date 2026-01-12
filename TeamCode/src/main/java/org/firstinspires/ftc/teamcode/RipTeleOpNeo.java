@@ -14,7 +14,7 @@ public class RipTeleOpNeo extends LinearOpMode {
     public void runOpMode() {
         Robot r = new Robot(this, 0);
 
-        Task.Pool pool = new Task.Pool();
+        Task.Pool pool = r.pool;
 
         Box<Boolean> intakeFinPrevState = Box.of(true);
         Box<Boolean> intakeEnabled = Box.of(true);
@@ -46,14 +46,20 @@ public class RipTeleOpNeo extends LinearOpMode {
             }
 
             if (gamepad2.yWasReleased() && r.launcher.getRpm() > 0) {
-                if (numBalls.get() == 1) {
-                    // will become 0
-                    pool.tryAdd("SetBallCountIntakeMode", Task.sequence(
-                        Task.pause(1000),
-                        Task.once(() -> r.launcher.spinSetMode(Launcher.SpinMode.INTAKE))
-                    ));
-                }
-                numBalls.set(Math.max(numBalls.get() - 1, 0));
+//                if (numBalls.get() != 1) {
+//                    pool.tryAdd("AutoRotateSpindexer", Task.sequence(
+//                            Task.pause(500),
+//                            Task.once(() -> r.launcher.spinAddIndex(2))
+//                    ));
+//                }
+//                if (numBalls.get() == 1) {
+//                    // will become 0
+//                    pool.tryAdd("SetBallCountIntakeMode", Task.sequence(
+//                        Task.pause(1000),
+//                        Task.once(() -> r.launcher.spinSetMode(Launcher.SpinMode.INTAKE))
+//                    ));
+//                }
+//                numBalls.set(Math.max(numBalls.get() - 1, 0));
             }
 
             if (gamepad1.dpadUpWasPressed()) {
@@ -82,13 +88,13 @@ public class RipTeleOpNeo extends LinearOpMode {
                     if (gamepad2.a) modNumBalls = true;
                 }
 
-                if (modNumBalls) {
-                    if (numBalls.get() == 2) {
-                        // will become 3
-                        r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
-                    }
-                    numBalls.set(Math.min(numBalls.get() + 1, 3));
-                }
+//                if (modNumBalls) {
+//                    if (numBalls.get() == 2) {
+//                        // will become 3
+//                        r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
+//                    }
+//                    numBalls.set(Math.min(numBalls.get() + 1, 3));
+//                }
             }
 
 //            if (r.joystick2.leftXUpdated()) {
@@ -152,13 +158,13 @@ public class RipTeleOpNeo extends LinearOpMode {
             }
             else if (!intakeFinPrevState.get() && r.intake.finIsNotPressed()) {
                 pool.remove("EmergencyEnableIntake");
-                if (r.intake.powerGet() >= 0) {
-                    if (numBalls.get() == 2) {
-                        // will become 3
-                        r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
-                    }
-                    numBalls.set(Math.min(numBalls.get() + 1, 3));
-                }
+//                if (r.intake.powerGet() >= 0) {
+//                    if (numBalls.get() == 2) {
+//                        // will become 3
+//                        r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
+//                    }
+//                    numBalls.set(Math.min(numBalls.get() + 1, 3));
+//                }
 
                 r.launcher.spinAddIndex(2);
                 pool.forceAdd("EnableIntake", Task.sequence(

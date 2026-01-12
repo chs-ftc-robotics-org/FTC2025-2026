@@ -16,18 +16,22 @@ public class Robot {
 
     private final LinearOpMode opMode;
 
+    public final Task.Pool pool = new Task.Pool();
+
     public Robot(LinearOpMode opMode, double startingAngle) {
         this.opMode = opMode;
 
-        drivetrain = new Drivetrain(opMode);
+        // Odometry can be started early
         odometry = new Odometry(opMode);
-        intake = new Intake(opMode);
-        launcher = new Launcher(opMode);
-        camera = opMode.hardwareMap.get(Limelight3A.class, "camera");
-
         odometry.reset(0, 0, startingAngle);
 
         opMode.waitForStart();
+
+        // Init these when start is pressed
+        drivetrain = new Drivetrain(opMode);
+        intake = new Intake(opMode);
+        launcher = new Launcher(opMode, this);
+        camera = opMode.hardwareMap.get(Limelight3A.class, "camera");
     }
 
     private final static Task.ControlFlow CONTINUE = Task.CONTINUE;
@@ -162,7 +166,7 @@ public class Robot {
     }
 
     public Task fetchMotif() {
-        return Task.sequence(
+        Task main = Task.sequence(
                 Task.once(camera::start),
                 Task.pause(250),
                 Task.until(() -> {
@@ -179,5 +183,6 @@ public class Robot {
                 }),
                 Task.once(camera::stop)
         );
+        return Task.any(main, Task.pause(1000));
     }
 }

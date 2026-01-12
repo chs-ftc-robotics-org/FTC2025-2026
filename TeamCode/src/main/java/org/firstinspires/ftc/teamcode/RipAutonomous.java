@@ -13,6 +13,7 @@ public class RipAutonomous {
         Task t = Task.sequence(
                 r.moveBy(side * 25, -35, 0.6),
                 r.faceDir(side * 10, 0.6),
+
                 r.fetchMotif(),
                 r.faceDir(side * -45, 0.6),
                 Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS)),
