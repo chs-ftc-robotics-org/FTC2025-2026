@@ -12,24 +12,22 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class Launcher {
     private final Robot robot;
+    private final OpMode opMode;
+
+    /* MOTORS & SERVOS */
     private final DcMotorEx motor;
     private final Servo spin;
     private final Servo lift;
     private final Servo garageDoor;
+
+    /* LED INDICATORS */
     private final Servo rpmIndicator;
     private final Servo launchBallIndicator;
     private final RevColorSensorV3 colorSensor;
 
-    private final static double TARGET_VELOCITY = 1630;
-    private final OpMode opMode;
+    /* PHYSICAL COMPONENT SETTINGS */
+    private final static double LAUNCHER_TARGET_VELOCITY = 1630;
     public static final double LIFT_POSITION_UP = 0.4, LIFT_POSITION_DOWN = 0.7;
-    public static final double FLYWHEEL_POWER_NEAR = 0.78;
-    public static final double FLYWHEEL_POWER_FAR = 1.0;
-
-    public static final double SPIN_OFFSET = 0.05;
-
-    private static boolean spindexerLocked = false;
-    private static boolean liftArmLocked = false;
 
     public Launcher(OpMode opMode, Robot r) {
         robot = r;
@@ -49,220 +47,119 @@ public class Launcher {
         motor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, baseline);
 
         liftDown();
-        spinSetIndex(0);
-        setLaunchProfile(LaunchProfile.DEFAULT);
+        spindexerSetIndex(0);
+        launchProfileSet(LaunchProfile.DEFAULT);
 
         // raiseIdle();
         // setFeedPosition(FeedPosition.IDLE);
     }
 
-    public void stopFlywheel() {
-        // motor.setVelocity(0);
-        motor.setPower(0);
+    /* FLYWHEEL */
+    public boolean flywheelReady() {
+        double rpm = rpmGet();
+        return Math.abs(rpm - launchProfile.rpm) < 2;
     }
 
-    public void reverseFlywheel() {
-        // motor.setVelocity(-1000);
-        spinSetMode(SpinMode.LAUNCH);
-        motor.setPower(-0.8);
-    }
-
-    public void startFlywheel(double power) {
+    public void flywheelRunWithPower(double power) {
         spinSetMode(SpinMode.LAUNCH);
         // motor.setVelocity(TARGET_VELOCITY);
         motor.setPower(power);
     }
 
     public void flywheelStart() {
-        spinSetMode(SpinMode.LAUNCH);
-        motor.setPower(launchProfile.power);
+        flywheelRunWithPower(launchProfile.power);
     }
 
-    public boolean flywheelReadyOld() {
-        opMode.telemetry.addData("Velocity", motor.getVelocity());
-        opMode.telemetry.addData("Error", TARGET_VELOCITY - motor.getVelocity());
-        return Math.abs(motor.getVelocity() - TARGET_VELOCITY) < 60;
+    public void flywheelReverse() {
+        flywheelRunWithPower(-0.8);
     }
 
-    public boolean flywheelReady() {
-        double rpm = getRpm();
-        return Math.abs(rpm - launchProfile.rpm) < 2;
+    public void flywheelStop() {
+        flywheelRunWithPower(0.0);
     }
 
-    private boolean servoIsAtPos(Servo servo, double pos) {
-        return Math.abs(servo.getPosition() - pos) < 0.01;
-    }
-
-    private Task servoToPosition(Servo servo, double position) {
-        Task check = Task.until(() -> servoIsAtPos(servo, position));
-        return Task.of(() -> servo.setPosition(position), check::run);
-    }
-
-    private boolean liftIsUp;
-
-    public void liftUp() {
-        if (!readyToLift()) return;
-        spindexerLocked = true;
-        liftIsUp = true;
-        lift.setPosition(LIFT_POSITION_UP);
-    }
-
-    public void liftDown() {
-        lift.setPosition(LIFT_POSITION_DOWN);
-        liftIsUp = false;
-        robot.pool.tryAdd("FreeSpindexer", Task.sequence(Task.pause(500), Task.once(() -> spindexerLocked = false)));
-    }
-
-    public boolean getLiftUp() {
-        return liftIsUp;
-    }
-
-    private double spinPosition;
-    public void spinSetPosition(double position) {
-        if (liftIsUp) return;
-
-        position = Util.clamp(position, 0, 1);
-        spin.setPosition(position);
-        spinPosition = position;
-    }
-
-    public void spinRotate(double x) {
-        spinSetPosition(spinPosition + x);
-    }
-
-    public double spinGetPosition() {
-        return spin.getPosition();
-    }
-
-    private final static double[] spinPositions = {
-         0.0450, // intake
-         0.0767, // launch
-         0.1134,
-         0.1528,
-         0.1850,
-         0.2250,
-    };
-
-    private int spinIndex;
-    public int spinSetIndex(int n) {
-        // if (spindexerLocked) return 0;
-        liftArmLocked = true;
-
-        n = (n + 6) % 6;
-        int oldIndex = spinIndex;
-        spinIndex = n;
-
-        spinSetPosition(spinPositions[n]);
-
-        int idxDiff = Math.abs(spinIndex - oldIndex);
-
-        robot.pool.tryAdd("FreeLiftArm", Task.sequence(Task.pause(350 * idxDiff), Task.once(() -> liftArmLocked = false)));
-
-        return idxDiff;
-    }
-
-    public int spinGetIndex() {
-        return spinIndex;
-    }
-
-    public int spinAddIndex(int i) {
-        i = i % 6;
-        int n = (spinIndex + i + 6) % 6;
-        return spinSetIndex(n);
-    }
-
-    public double getRpm() {
+    public double rpmGet() {
         double ticksPerRev = motor.getMotorType().getTicksPerRev();
         double ticksPerSecond = motor.getVelocity();
         return Math.abs((ticksPerSecond / ticksPerRev) * 60.0);
     }
 
-    public void displayRpmStatus() {
+    public void rpmStatusDisplay() {
         double v = motor.getVelocity();
         if (v <= 0) {
             rpmIndicator.setPosition(0); // Off
         }
-        else if (v < TARGET_VELOCITY - 30) {
+        else if (v < LAUNCHER_TARGET_VELOCITY - 30) {
             rpmIndicator.setPosition(0.333); // Orange
         }
         else {
             double blue = 0.611;
             double red = 0.3;
-            rpmIndicator.setPosition(launchProfile == LaunchProfile.NEAR ? red : blue); // Blue
+            rpmIndicator.setPosition(launchProfile == LaunchProfile.NEAR ? red : blue);
         }
     }
 
-    public void displayBallStatus() {
-        BallDetection detected = getDetectedBall();
-        setBallStatusDisplay(readyToLift() ? detected : BallDetection.EMPTY);
+    /* LIFT SERVO */
+    public void liftUp() {
+        if (!spindexerReadyToLaunch()) return;
+        lift.setPosition(LIFT_POSITION_UP);
     }
 
-    public void setBallStatusDisplay(BallDetection b) {
-        if (b == BallDetection.EMPTY) {
-            launchBallIndicator.setPosition(0);
-        }
-        else if (b == BallDetection.GREEN) {
-            launchBallIndicator.setPosition(0.5);
-        }
-        else if (b == BallDetection.PURPLE) {
-            launchBallIndicator.setPosition(0.720);
-        }
+    public void liftDown() {
+        lift.setPosition(LIFT_POSITION_DOWN);
     }
 
-    public boolean readyToLift() {
-        return spinIndex % 2 == 1;
+    /* SPINDEXER */
+    private double spindexerPosition;
+
+    public double spindexerGetPosition() {
+        return spin.getPosition();
     }
 
-    public boolean readyToIntake() {
-        return spinIndex % 2 == 0;
+    public void spinSetPosition(double position) {
+        position = Util.clamp(position, 0, 1);
+        spin.setPosition(position);
+        spindexerPosition = position;
     }
 
-    private static final double GARAGE_POSITION_MAX = 0.7294;
-    private static final double GARAGE_POSITION_MIN = 0.2950;
+    private int spindexerIndex;
+    private final static double[] spindexerPositions = {
+            0.0450, // intake
+            0.0767, // launch
+            0.1134,
+            0.1528,
+            0.1850,
+            0.2250,
+    };
 
-    public double garageDoorGetPosition() {
-        return garageDoor.getPosition();
+    public int spindexerGetIndex() {
+        return spindexerIndex;
     }
 
-    public void garageDoorSetPosition(double pos) {
-        garageDoor.setPosition(Util.clamp(pos, GARAGE_POSITION_MIN, GARAGE_POSITION_MAX));
+    public int spindexerSetIndex(int n) {
+        n = (n + 6) % 6;
+        int oldIndex = spindexerIndex;
+        spindexerIndex = n;
+
+        spinSetPosition(spindexerPositions[n]);
+
+        int idxDiff = Math.abs(spindexerIndex - oldIndex);
+
+        return idxDiff;
     }
 
-    public void garageDoorRotate(double dx) {
-        double newPos = garageDoorGetPosition() + dx;
-        garageDoorSetPosition(newPos);
+    public int spindexerAddIndex(int i) {
+        i = i % 6;
+        int n = (spindexerIndex + i + 6) % 6;
+        return spindexerSetIndex(n);
     }
 
-    public Hsv getDetectedColorValues() {
-        return new Rgb((short) colorSensor.red(), (short) colorSensor.green(), (short) colorSensor.blue()).toHsv();
+    public boolean spindexerReadyToLaunch() {
+        return spindexerIndex % 2 == 1;
     }
 
-    public double getProximity() {
-        return colorSensor.getDistance(DistanceUnit.MM);
-    }
-
-    public enum BallDetection {
-        PURPLE,
-        GREEN,
-        EMPTY,
-    }
-
-    public BallDetection getDetectedBall() {
-        if (getProximity() > 60) {
-            return BallDetection.EMPTY;
-        }
-        else {
-            if (getDetectedColorValues().v < 0.4) {
-                return BallDetection.EMPTY;
-            }
-
-            if (getDetectedColorValues().h < 185) {
-                return BallDetection.GREEN;
-            }
-            else {
-                return BallDetection.PURPLE;
-            }
-        }
+    public boolean spindexerReadyToIntake() {
+        return spindexerIndex % 2 == 0;
     }
 
     public enum SpinMode {
@@ -273,36 +170,49 @@ public class Launcher {
     private SpinMode spinMode = SpinMode.INTAKE;
     public void spinSetMode(SpinMode mode) {
         spinMode = mode;
-        if (!spinIsReadyFor(mode)) spinAddIndex(1);
+        if (!spinIsReadyFor(mode)) spindexerAddIndex(1);
     }
 
     public boolean spinIsReadyFor(SpinMode mode) {
         switch (mode) {
             case INTAKE:
-                return readyToIntake();
+                return spindexerReadyToIntake();
             case LAUNCH:
-                return readyToLift();
+                return spindexerReadyToLaunch();
             default:
                 return false;
         }
     }
 
     public void spinNext() {
-        spinAddIndex(spinIsReadyFor(spinMode) ? 2 : 1);
+        spindexerAddIndex(spinIsReadyFor(spinMode) ? 2 : 1);
     }
 
     public void spinPrev() {
-        spinAddIndex(spinIsReadyFor(spinMode) ? -2 : -1);
+        spindexerAddIndex(spinIsReadyFor(spinMode) ? -2 : -1);
     }
 
-    public boolean spinIsMoving() {
-        return Math.abs(spin.getPosition() - spinPositions[spinIndex]) > 0.001;
+    public Task setSpinIndexAndWait(int n) {
+        Box.Int diff = Box.Int.of(0);
+        return Task.sequence(
+                // Task.until(() -> !spindexerLocked),
+                Task.once(() -> diff.set(Launcher.this.spindexerSetIndex(n))),
+                Task.lazy(() -> Task.pause(300 * diff.get()))
+        );
     }
 
-    // GREEN: 160, 0.63, 0.60; 44 mm
-    // PURPLE: 212, 0.44, 0.56; 44 mm
-    // BLANK: 170, 0.43, 0.28; 64 mm
+    public Task addSpinIndexAndWait(int i) {
+        Box.Int diff = Box.Int.of(0);
+        return Task.sequence(
+                // Task.until(() -> !spindexerLocked),
+                Task.once(() -> diff.set(Launcher.this.spindexerAddIndex(i))),
+                Task.lazy(() -> Task.pause(300 * diff.get()))
+        );
+    }
 
+    /* GARAGE DOOR */
+    private static final double GARAGE_POSITION_MAX = 0.7294;
+    private static final double GARAGE_POSITION_MIN = 0.2950;
     private static final double GARAGE_POSITION_NEAR = 0.7294;
     private static final double GARAGE_POSITION_FAR = 0.3289;
 
@@ -325,27 +235,72 @@ public class Launcher {
     }
 
     private LaunchProfile launchProfile = LaunchProfile.DEFAULT;
-    public void setLaunchProfile(LaunchProfile profile) {
+
+    public void launchProfileSet(LaunchProfile profile) {
         garageDoorSetPosition(profile.garagePos);
         this.launchProfile = profile;
     }
 
-    public Task setSpinIndexAndWait(int n) {
-        Box.Int diff = Box.Int.of(0);
-        return Task.sequence(
-                // Task.until(() -> !spindexerLocked),
-                Task.once(() -> diff.set(Launcher.this.spinSetIndex(n))),
-                Task.lazy(() -> Task.pause(300 * diff.get()))
-        );
+    public double garageDoorGetPosition() {
+        return garageDoor.getPosition();
     }
 
-    public Task addSpinIndexAndWait(int i) {
-        Box.Int diff = Box.Int.of(0);
-        return Task.sequence(
-                // Task.until(() -> !spindexerLocked),
-                Task.once(() -> diff.set(Launcher.this.spinAddIndex(i))),
-                Task.lazy(() -> Task.pause(300 * diff.get()))
-        );
+    public void garageDoorSetPosition(double pos) {
+        garageDoor.setPosition(Util.clamp(pos, GARAGE_POSITION_MIN, GARAGE_POSITION_MAX));
+    }
+
+    public void garageDoorRotate(double dx) {
+        double newPos = garageDoorGetPosition() + dx;
+        garageDoorSetPosition(newPos);
+    }
+
+    /* COLOR SENSOR */
+    public enum ColorSensorDetection {
+        PURPLE,
+        GREEN,
+        EMPTY,
+    }
+
+    public ColorSensorDetection colorSensorGetDetection() {
+        if (colorSensorGetProximity() > 60) {
+            return ColorSensorDetection.EMPTY;
+        }
+        else {
+            if (colorSensorGetColors().v < 0.4) {
+                return ColorSensorDetection.EMPTY;
+            }
+
+            if (colorSensorGetColors().h < 185) {
+                return ColorSensorDetection.GREEN;
+            }
+            else {
+                return ColorSensorDetection.PURPLE;
+            }
+        }
+    }
+
+    public void colorSensorDisplayDetection() {
+        ColorSensorDetection detected = colorSensorGetDetection();
+
+        switch (detected) {
+            case GREEN:
+                launchBallIndicator.setPosition(0.5);
+                break;
+            case PURPLE:
+                launchBallIndicator.setPosition(0.720);
+                break;
+            case EMPTY:
+            default:
+                launchBallIndicator.setPosition(0);
+        }
+    }
+
+    public Hsv colorSensorGetColors() {
+        return new Rgb((short) colorSensor.red(), (short) colorSensor.green(), (short) colorSensor.blue()).toHsv();
+    }
+
+    public double colorSensorGetProximity() {
+        return colorSensor.getDistance(DistanceUnit.MM);
     }
 }
 
@@ -358,4 +313,9 @@ Spindexer LED:
 Red: No ball
 Green: Green ball ready to launch
 Purple: Green but Purple ball
+
+Color Sensor Data:
+GREEN: 160, 0.63, 0.60; 44 mm
+PURPLE: 212, 0.44, 0.56; 44 mm
+BLANK: 170, 0.43, 0.28; 64 mm
  */

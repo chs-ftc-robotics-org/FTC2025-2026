@@ -29,7 +29,7 @@ public class RipTeleOpNeo extends LinearOpMode {
 
             // ========== Intake ===========
             if ((gamepad1.right_bumper || gamepad2.right_trigger > 0.1) && intakeEnabled.get()) {
-                if (r.launcher.readyToIntake())
+                if (r.launcher.spindexerReadyToIntake())
                     r.intake.start();
             } else if (gamepad1.left_bumper || gamepad2.left_trigger > 0.1) {
                 r.intake.reverse();
@@ -45,7 +45,7 @@ public class RipTeleOpNeo extends LinearOpMode {
                 r.launcher.liftDown();
             }
 
-            if (gamepad2.yWasReleased() && r.launcher.getRpm() > 0) {
+            if (gamepad2.yWasReleased() && r.launcher.rpmGet() > 0) {
 //                if (numBalls.get() != 1) {
 //                    pool.tryAdd("AutoRotateSpindexer", Task.sequence(
 //                            Task.pause(500),
@@ -70,21 +70,21 @@ public class RipTeleOpNeo extends LinearOpMode {
             }
 
             if (gamepad1.yWasPressed()) {
-                r.launcher.setLaunchProfile(Launcher.LaunchProfile.FAR);
+                r.launcher.launchProfileSet(Launcher.LaunchProfile.FAR);
             } else if (gamepad1.bWasPressed()) {
-                r.launcher.setLaunchProfile(Launcher.LaunchProfile.DEFAULT);
+                r.launcher.launchProfileSet(Launcher.LaunchProfile.DEFAULT);
             } else if (gamepad1.aWasPressed()) {
-                  r.launcher.setLaunchProfile(Launcher.LaunchProfile.NEAR);
+                  r.launcher.launchProfileSet(Launcher.LaunchProfile.NEAR);
               }
             
             if (r.intake.finIsNotPressed()) {
                 boolean modNumBalls = false;
                 if (gamepad2.dpadLeftWasPressed()) {
-                    r.launcher.spinAddIndex(2);
+                    r.launcher.spindexerAddIndex(2);
                     if (gamepad2.a) modNumBalls = true;
                 }
                 else if (gamepad2.dpadRightWasPressed()) {
-                    r.launcher.spinAddIndex(-2);
+                    r.launcher.spindexerAddIndex(-2);
                     if (gamepad2.a) modNumBalls = true;
                 }
 
@@ -125,25 +125,20 @@ public class RipTeleOpNeo extends LinearOpMode {
             }
 
             if (gamepad2.a) {
-                r.launcher.startFlywheel(-0.45);
+                r.launcher.flywheelRunWithPower(-0.45);
             }
             else if (gamepad2.right_bumper) {
-                // r.launcher.startFlywheel(gamepad2.b ? Launcher.FLYWHEEL_POWER_FAR : Launcher.FLYWHEEL_POWER_NEAR);
-                if (gamepad2.b) r.launcher.startFlywheel(1.0);
+                if (gamepad2.b) r.launcher.flywheelRunWithPower(1.0);
                 else r.launcher.flywheelStart();
             }
             else if (gamepad2.left_bumper) {
-                r.launcher.reverseFlywheel();
+                r.launcher.flywheelReverse();
             }
             else {
-                r.launcher.stopFlywheel();
+                r.launcher.flywheelStop();
             }
 
-            if (r.launcher.getLiftUp()) {
-                r.launcher.setBallStatusDisplay(Launcher.BallDetection.EMPTY);
-            } else {
-                r.launcher.displayBallStatus();
-            }
+            r.launcher.colorSensorDisplayDetection();
 
             if (intakeFinPrevState.get() && !r.intake.finIsNotPressed()) {
                 pool.tryAdd("DisableIntake", Task.sequence(
@@ -166,7 +161,7 @@ public class RipTeleOpNeo extends LinearOpMode {
 //                    numBalls.set(Math.min(numBalls.get() + 1, 3));
 //                }
 
-                r.launcher.spinAddIndex(2);
+                r.launcher.spindexerAddIndex(2);
                 pool.forceAdd("EnableIntake", Task.sequence(
                         Task.pause(700),
                         Task.once(() -> intakeEnabled.set(true))
@@ -176,14 +171,13 @@ public class RipTeleOpNeo extends LinearOpMode {
             intakeFinPrevState.set(r.intake.finIsNotPressed());
 
             telemetry.addData("Garage position", r.launcher.garageDoorGetPosition());
-            telemetry.addData("Spindexer position", r.launcher.spinGetPosition());
-            telemetry.addData("Spindexer moving", r.launcher.spinIsMoving());
-            telemetry.addData("Launcher RPM", r.launcher.getRpm());
+            telemetry.addData("Spindexer position", r.launcher.spindexerGetPosition());
+            telemetry.addData("Launcher RPM", r.launcher.rpmGet());
 
-            Hsv cs = r.launcher.getDetectedColorValues();
+            Hsv cs = r.launcher.colorSensorGetColors();
             telemetry.addData("Detected color", "hsv(%f, %f, %f)", cs.h, cs.s, cs.v);
-            telemetry.addData("Proximity", r.launcher.getProximity());
-            telemetry.addData("Detected Ball Color", r.launcher.getDetectedBall().name());
+            telemetry.addData("Proximity", r.launcher.colorSensorGetProximity());
+            telemetry.addData("Detected Ball Color", r.launcher.colorSensorGetDetection().name());
 
             telemetry.addData("Intake Fin Pressed", r.intake.finIsNotPressed());
 
@@ -220,13 +214,13 @@ public class RipTeleOpNeo extends LinearOpMode {
         return Task.sequence(
                 Task.once(() -> r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH)),
                 Task.once(() -> {
-                    if (!r.launcher.readyToLift()) r.launcher.spinAddIndex(1);
+                    if (!r.launcher.spindexerReadyToLaunch()) r.launcher.spindexerAddIndex(1);
                 }),
                 Task.once(r.launcher::flywheelStart),
                 launchOne(r),
                 launchOne(r),
                 launchOne(r),
-                Task.once(r.launcher::stopFlywheel)
+                Task.once(r.launcher::flywheelStop)
         );
     }
 }

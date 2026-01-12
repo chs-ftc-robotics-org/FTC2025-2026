@@ -42,9 +42,9 @@ public class Robot {
             odometry.update();
             Task.ControlFlow result = task.run();
             odometry.log();
-            launcher.displayRpmStatus();
+            launcher.rpmStatusDisplay();
             opMode.telemetry.addData("Motif", motif.get());
-            opMode.telemetry.addData("Spin index", launcher.spinGetIndex());
+            opMode.telemetry.addData("Spin index", launcher.spindexerGetIndex());
             opMode.telemetry.update();
 
             if (result == BREAK) break;
@@ -161,7 +161,7 @@ public class Robot {
                 launchOne(),
                 launchOne(),
                 launchOne(),
-                Task.once(launcher::stopFlywheel)
+                Task.once(launcher::flywheelStop)
         );
     }
 

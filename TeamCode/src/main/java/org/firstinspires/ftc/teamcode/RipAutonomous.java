@@ -3,8 +3,6 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
-
 import java.util.function.Function;
 
 public class RipAutonomous {
@@ -16,7 +14,7 @@ public class RipAutonomous {
 
                 r.fetchMotif(),
                 r.faceDir(side * -45, 0.6),
-                Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS)),
+                Task.once(() -> r.launcher.launchProfileSet(Launcher.LaunchProfile.AUTONOMOUS)),
                 r.launchMotif(),
                 r.moveBy(side * -16, -16, 0.5)
                 // r.faceDir(sign * -90, 0.45),
@@ -39,7 +37,7 @@ public class RipAutonomous {
         Robot r = new Robot(opMode, 0);
         Task t = Task.sequence(
                 r.fetchMotif(),
-                Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS_FAR)),
+                Task.once(() -> r.launcher.launchProfileSet(Launcher.LaunchProfile.AUTONOMOUS_FAR)),
                 r.moveBy(0, 1.5, 0.3),
                 r.faceDir(side * -25, 0.3),
                 r.launchMotif(),
