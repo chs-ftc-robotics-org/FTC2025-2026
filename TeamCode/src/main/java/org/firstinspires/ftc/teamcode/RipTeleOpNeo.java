@@ -39,13 +39,13 @@ public class RipTeleOpNeo extends LinearOpMode {
 
             // ========= Launcher ==========
             if (gamepad2.y) {
-                r.launcher.liftUp();
+                r.launcher.feedUp();
             }
             else {
-                r.launcher.liftDown();
+                r.launcher.feedDown();
             }
 
-            if (gamepad2.yWasReleased() && r.launcher.rpmGet() > 0) {
+            if (gamepad2.yWasReleased() && r.launcher.flywheelGetRpm() > 0) {
 //                if (numBalls.get() != 1) {
 //                    pool.tryAdd("AutoRotateSpindexer", Task.sequence(
 //                            Task.pause(500),
@@ -172,7 +172,7 @@ public class RipTeleOpNeo extends LinearOpMode {
 
             telemetry.addData("Garage position", r.launcher.garageDoorGetPosition());
             telemetry.addData("Spindexer position", r.launcher.spindexerGetPosition());
-            telemetry.addData("Launcher RPM", r.launcher.rpmGet());
+            telemetry.addData("Launcher RPM", r.launcher.flywheelGetRpm());
 
             Hsv cs = r.launcher.colorSensorGetColors();
             telemetry.addData("Detected color", "hsv(%f, %f, %f)", cs.h, cs.s, cs.v);
@@ -201,9 +201,9 @@ public class RipTeleOpNeo extends LinearOpMode {
     private Task launchOne(Robot r) {
         return Task.sequence(
                 Task.until(r.launcher::flywheelReady),
-                Task.once(r.launcher::liftUp),
+                Task.once(r.launcher::feedUp),
                 Task.pause(750),
-                Task.once(r.launcher::liftDown),
+                Task.once(r.launcher::feedDown),
                 Task.pause(500),
                 Task.once(r.launcher::spinNext),
                 Task.pause(500)

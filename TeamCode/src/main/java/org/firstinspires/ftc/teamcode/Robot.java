@@ -42,9 +42,13 @@ public class Robot {
             odometry.update();
             Task.ControlFlow result = task.run();
             odometry.log();
-            launcher.rpmStatusDisplay();
+            launcher.flywheelDisplayRpm();
+            launcher.lockReport();
             opMode.telemetry.addData("Motif", motif.get());
             opMode.telemetry.addData("Spin index", launcher.spindexerGetIndex());
+            opMode.telemetry.addData("Active tasks", pool.activeTaskNames());
+            opMode.telemetry.addLine("===== Log =====");
+            opMode.telemetry.addLine(pool.getDebugLog());
             opMode.telemetry.update();
 
             if (result == BREAK) break;
@@ -139,9 +143,9 @@ public class Robot {
     public Task launchOne() {
         return Task.sequence(
                 Task.until(launcher::flywheelReady),
-                Task.once(launcher::liftUp),
+                Task.once(launcher::feedUp),
                 Task.pause(500),
-                Task.once(launcher::liftDown),
+                Task.once(launcher::feedDown),
                 Task.pause(500),
                 launcher.addSpinIndexAndWait(2)
         );

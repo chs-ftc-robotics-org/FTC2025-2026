@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 public class Task {
     public enum ControlFlow {
@@ -133,42 +134,111 @@ public class Task {
 
     static Task pool(Pool pool) {
         return Task.of(() -> {
-            // List<String> toRemove = new ArrayList<>();
+            List<Pool.Diff> changes = pool.pendingChanges;
             pool.tasks.forEach((name, task) -> {
-                task.run();
-//                if (task.run() == BREAK) {
-//                    toRemove.add(name);
-//                }
+                if (task.run() == BREAK) {
+                    changes.add(Pool.Diff.remove(name));
+                }
             });
-            // toRemove.forEach(pool.tasks::remove);
+            for (Pool.Diff diff : changes) switch (diff.kind) {
+                case REMOVE:
+                    pool.unsafeRemove(diff.name);
+                    break;
+                case TRY_ADD:
+                    pool.unsafeTryAdd(diff.name, diff.task);
+                    break;
+                case FORCE_ADD:
+                    pool.unsafeForceAdd(diff.name, diff.task);
+                    break;
+            }
+            changes.clear();
             return CONTINUE;
         });
     }
 
     public static class Pool {
+        private enum DiffKind { TRY_ADD, FORCE_ADD, REMOVE }
+
+        private static class Diff {
+            public final DiffKind kind;
+            public final String name;
+            public final Task task;
+
+            private Diff(DiffKind kind, String name, Task task) {
+                this.kind = kind;
+                this.name = name;
+                this.task = task;
+            }
+
+            public static Diff tryAdd(String name, Task task) {
+                return new Diff(DiffKind.TRY_ADD, name, task);
+            }
+
+            public static Diff forceAdd(String name, Task task) {
+                return new Diff(DiffKind.FORCE_ADD, name, task);
+            }
+
+            public static Diff remove(String name) {
+                return new Diff(DiffKind.REMOVE, name, null);
+            }
+        }
+
         private final HashMap<String, Task> tasks = new HashMap<>();
+        private final List<Diff> pendingChanges = new ArrayList<>();
+        private StringBuilder debugLog = new StringBuilder();
 
         public void tryAdd(String name, Task task) {
-            forceAdd(name, task);
-            //if (has(name)) return;
-            //tasks.put(name, task);
+            pendingChanges.add(Diff.tryAdd(name, task));
         }
 
         public void forceAdd(String name, Task task) {
-            Task old = tasks.get(name);
-            if (old != null) {
-                old.cancel();
-            }
-            tasks.put(name, task);
+            pendingChanges.add(Diff.forceAdd(name, task));
         }
 
         public void remove(String name) {
-            Task removed = tasks.get(name);
-            if (removed != null) removed.cancel();
+            pendingChanges.add(Diff.remove(name));
         }
 
         public boolean has(String name) {
             return tasks.containsKey(name);
+        }
+
+        /// IMPORTANT: may not be called within a Task that's inside of this pool
+        private void unsafeTryAdd(String name, Task task) {
+            if (this.has(name)) return;
+            tasks.put(name, task);
+            debugPrintln("[!] try add " + name);
+        }
+
+        /// IMPORTANT: may not be called within a Task that's inside of this pool
+        private void unsafeForceAdd(String name, Task task) {
+            unsafeRemove(name);
+            tasks.put(name, task);
+            debugPrintln("[!] force add " + name);
+        }
+
+        /// IMPORTANT: may not be called within a Task that's inside of this pool
+        private void unsafeRemove(String name) {
+            Task removed = tasks.remove(name);
+            if (removed != null) removed.cancel();
+            debugPrintln("[!] remove " + name);
+        }
+
+        public void debugPrintln(String s) {
+            debugLog.append(s);
+            debugLog.append('\n');
+        }
+
+        public void clearDebugLog() {
+            debugLog = new StringBuilder();
+        }
+
+        public String getDebugLog() {
+            return debugLog.toString();
+        }
+
+        public List<String> activeTaskNames() {
+            return new ArrayList<>(tasks.keySet());
         }
     }
 }

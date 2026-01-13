@@ -14,10 +14,12 @@ public class Launcher {
     private final Robot robot;
     private final OpMode opMode;
 
+    private boolean initialized = false;
+
     /* MOTORS & SERVOS */
-    private final DcMotorEx motor;
-    private final Servo spin;
-    private final Servo lift;
+    private final DcMotorEx flywheel;
+    private final Servo spindexer;
+    private final Servo feed;
     private final Servo garageDoor;
 
     /* LED INDICATORS */
@@ -27,43 +29,74 @@ public class Launcher {
 
     /* PHYSICAL COMPONENT SETTINGS */
     private final static double LAUNCHER_TARGET_VELOCITY = 1630;
-    public static final double LIFT_POSITION_UP = 0.4, LIFT_POSITION_DOWN = 0.7;
+    public static final double FEED_POSITION_UP = 0.4, FEED_POSITION_DOWN = 0.7;
 
     public Launcher(OpMode opMode, Robot r) {
         robot = r;
         this.opMode = opMode;
-        motor = opMode.hardwareMap.get(DcMotorEx.class, "launcher/motor");
-        spin = opMode.hardwareMap.get(Servo.class, "launcher/spin");
-        lift = opMode.hardwareMap.get(Servo.class, "launcher/lift");
+        flywheel = opMode.hardwareMap.get(DcMotorEx.class, "launcher/motor");
+        spindexer = opMode.hardwareMap.get(Servo.class, "launcher/spin");
+        feed = opMode.hardwareMap.get(Servo.class, "launcher/lift");
         garageDoor = opMode.hardwareMap.get(Servo.class, "launcher/garageDoor");
         rpmIndicator = opMode.hardwareMap.get(Servo.class, "launcher/rpmIndicator");
         launchBallIndicator = opMode.hardwareMap.get(Servo.class, "launcher/ballColor");
         colorSensor = opMode.hardwareMap.get(RevColorSensorV3.class, "color");
 
-        motor.setDirection(DcMotorSimple.Direction.REVERSE);
+        flywheel.setDirection(DcMotorSimple.Direction.REVERSE);
         // motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         PIDFCoefficients baseline = new PIDFCoefficients(42, 0, 0, 12.247);
-        motor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, baseline);
+        flywheel.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, baseline);
 
-        liftDown();
+        feedDown();
         spindexerSetIndex(0);
         launchProfileSet(LaunchProfile.DEFAULT);
+    }
 
-        // raiseIdle();
-        // setFeedPosition(FeedPosition.IDLE);
+    /* LOCK */
+    private Lock currentLock = Lock.EMPTY;
+
+    private enum Lock {
+        EMPTY,
+        SPINDEXER,
+        FEED
+    }
+
+    public void lockReport() {
+        opMode.telemetry.addData("Launcher lock status", currentLock);
+    }
+
+    private boolean lockAcquire(Lock which) {
+        if (currentLock == Lock.EMPTY || currentLock == which) {
+            currentLock = which;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void lockRelease() {
+        currentLock = Lock.EMPTY;
+    }
+
+    private Task lockWaitAndRelease(int millis) {
+        return Task.sequence(
+                Task.pause(millis),
+                Task.once(this::lockRelease),
+                Task.once(() -> robot.pool.debugPrintln("[#] lock released"))
+        );
     }
 
     /* FLYWHEEL */
     public boolean flywheelReady() {
-        double rpm = rpmGet();
+        double rpm = flywheelGetRpm();
         return Math.abs(rpm - launchProfile.rpm) < 2;
     }
 
     public void flywheelRunWithPower(double power) {
         spinSetMode(SpinMode.LAUNCH);
         // motor.setVelocity(TARGET_VELOCITY);
-        motor.setPower(power);
+        flywheel.setPower(power);
     }
 
     public void flywheelStart() {
@@ -75,17 +108,17 @@ public class Launcher {
     }
 
     public void flywheelStop() {
-        flywheelRunWithPower(0.0);
+        flywheel.setPower(0.0);
     }
 
-    public double rpmGet() {
-        double ticksPerRev = motor.getMotorType().getTicksPerRev();
-        double ticksPerSecond = motor.getVelocity();
+    public double flywheelGetRpm() {
+        double ticksPerRev = flywheel.getMotorType().getTicksPerRev();
+        double ticksPerSecond = flywheel.getVelocity();
         return Math.abs((ticksPerSecond / ticksPerRev) * 60.0);
     }
 
-    public void rpmStatusDisplay() {
-        double v = motor.getVelocity();
+    public void flywheelDisplayRpm() {
+        double v = flywheel.getVelocity();
         if (v <= 0) {
             rpmIndicator.setPosition(0); // Off
         }
@@ -99,30 +132,32 @@ public class Launcher {
         }
     }
 
-    /* LIFT SERVO */
-    public void liftUp() {
+    /* FEED SERVO */
+    public void feedUp() {
         if (!spindexerReadyToLaunch()) return;
-        lift.setPosition(LIFT_POSITION_UP);
+
+        if (!lockAcquire(Lock.FEED)) return;
+        feed.setPosition(FEED_POSITION_UP);
     }
 
-    public void liftDown() {
-        lift.setPosition(LIFT_POSITION_DOWN);
+    public void feedDown() {
+        if (servoIsAtPos(feed, FEED_POSITION_DOWN)) return;
+
+        feed.setPosition(FEED_POSITION_DOWN);
+        robot.pool.forceAdd("FeedLockRelease", lockWaitAndRelease(250));
     }
 
     /* SPINDEXER */
-    private double spindexerPosition;
-
     public double spindexerGetPosition() {
-        return spin.getPosition();
+        return spindexer.getPosition();
     }
 
-    public void spinSetPosition(double position) {
+    private void spindexerSetPosition(double position) {
         position = Util.clamp(position, 0, 1);
-        spin.setPosition(position);
-        spindexerPosition = position;
+        spindexer.setPosition(position);
     }
 
-    private int spindexerIndex;
+    private int spindexerIndex = 0;
     private final static double[] spindexerPositions = {
             0.0450, // intake
             0.0767, // launch
@@ -141,11 +176,15 @@ public class Launcher {
         int oldIndex = spindexerIndex;
         spindexerIndex = n;
 
-        spinSetPosition(spindexerPositions[n]);
+        int diff = Math.abs(spindexerIndex - oldIndex);
+        if (initialized && (diff == 0 || !lockAcquire(Lock.SPINDEXER))) return 0;
+        initialized = true;
 
-        int idxDiff = Math.abs(spindexerIndex - oldIndex);
+        spindexerSetPosition(spindexerPositions[n]);
 
-        return idxDiff;
+        robot.pool.forceAdd("SpindexerLockRelease", lockWaitAndRelease(350 * diff));
+
+        return diff;
     }
 
     public int spindexerAddIndex(int i) {
@@ -170,7 +209,10 @@ public class Launcher {
     private SpinMode spinMode = SpinMode.INTAKE;
     public void spinSetMode(SpinMode mode) {
         spinMode = mode;
-        if (!spinIsReadyFor(mode)) spindexerAddIndex(1);
+        if (!spinIsReadyFor(mode)) {
+            robot.pool.debugPrintln("[!] adjust spindexer");
+            spindexerAddIndex(1);
+        }
     }
 
     public boolean spinIsReadyFor(SpinMode mode) {
@@ -302,6 +344,10 @@ public class Launcher {
     public double colorSensorGetProximity() {
         return colorSensor.getDistance(DistanceUnit.MM);
     }
+
+    private boolean servoIsAtPos(Servo servo, double position) {
+        return Math.abs(servo.getPosition() - position) < 0.01;
+    }
 }
 
 /*
@@ -319,3 +365,5 @@ GREEN: 160, 0.63, 0.60; 44 mm
 PURPLE: 212, 0.44, 0.56; 44 mm
 BLANK: 170, 0.43, 0.28; 64 mm
  */
+
+/* Christopher was here */
