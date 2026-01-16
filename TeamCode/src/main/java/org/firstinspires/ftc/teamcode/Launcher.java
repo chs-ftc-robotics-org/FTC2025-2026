@@ -67,6 +67,8 @@ public class Launcher {
     }
 
     private boolean lockAcquire(Lock which) {
+        if (1 + 1 == 2) return true;
+
         if (currentLock == Lock.EMPTY || currentLock == which) {
             currentLock = which;
             return true;

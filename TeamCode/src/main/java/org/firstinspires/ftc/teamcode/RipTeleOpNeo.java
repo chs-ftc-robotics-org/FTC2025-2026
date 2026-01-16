@@ -29,8 +29,10 @@ public class RipTeleOpNeo extends LinearOpMode {
 
             // ========== Intake ===========
             if ((gamepad1.right_bumper || gamepad2.right_trigger > 0.1) && intakeEnabled.get()) {
-                if (r.launcher.spindexerReadyToIntake())
+                r.launcher.spinSetMode(Launcher.SpinMode.INTAKE);
+                if (r.launcher.spindexerReadyToIntake()) {
                     r.intake.start();
+                }
             } else if (gamepad1.left_bumper || gamepad2.left_trigger > 0.1) {
                 r.intake.reverse();
             } else {
@@ -80,11 +82,11 @@ public class RipTeleOpNeo extends LinearOpMode {
             if (r.intake.finIsNotPressed()) {
                 boolean modNumBalls = false;
                 if (gamepad2.dpadLeftWasPressed()) {
-                    r.launcher.spindexerAddIndex(2);
+                    r.launcher.spindexerAddIndex(-2);
                     if (gamepad2.a) modNumBalls = true;
                 }
                 else if (gamepad2.dpadRightWasPressed()) {
-                    r.launcher.spindexerAddIndex(-2);
+                    r.launcher.spindexerAddIndex(2);
                     if (gamepad2.a) modNumBalls = true;
                 }
 
@@ -109,7 +111,8 @@ public class RipTeleOpNeo extends LinearOpMode {
 //            }
 
             if (gamepad2.dpad_up) {
-                r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
+                r.launcher.spindexerSetIndex(1);
+//                r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
             }
             else if (gamepad2.dpad_down) {
                 r.launcher.spinSetMode(Launcher.SpinMode.INTAKE);
