@@ -16,19 +16,38 @@ public class RipAutonomous {
                 r.faceDir(side * -45, 0.6),
                 Task.once(() -> r.launcher.launchProfileSet(Launcher.LaunchProfile.AUTONOMOUS)),
                 r.launchMotif(),
-                r.moveBy(side * -16, -16, 0.5)
-                // r.faceDir(sign * -90, 0.45),
-                //r.moveBy(0, -13, 0.6)
-                // Task.once(() -> r.launcher.spinSetIndex(0)),
-                // Task.once(r.intake::start),
-                // rawMove(r, -0.3, x -> x < 4),
-                // r.launcher.addSpinIndexAndWait(2),
-                // rawMove(r, -0.3, x -> x < 0),
-                // r.launcher.addSpinIndexAndWait(2),
-                // rawMove(r, -0.3, x -> x < -4),
-                // r.moveBy(30, 13, 0.6),
-                // Task.once(r.intake::stop)
-                //r.moveBy(-24, -24, 0.5)
+                r.moveBy(side * -3, -10, 0.5),
+                r.faceDir(side * -90, 0.45),
+                // r.moveBy(0, -13, 0.6),
+                Task.once(() -> r.launcher.spindexerSetIndex(0)),
+                Task.once(r.intake::start),
+                rawMove(r, -0.3),
+                Task.until(() -> !r.intake.finIsNotPressed()),
+                Task.until(() -> r.intake.finIsNotPressed()),
+                r.launcher.addSpinIndexAndWait(2),
+                Task.any(
+                        Task.until(() -> !r.intake.finIsNotPressed()),
+                        Task.pause(1500)
+                ),
+                Task.until(() -> r.intake.finIsNotPressed()),
+                r.launcher.addSpinIndexAndWait(2),
+                Task.any(
+                        Task.until(() -> !r.intake.finIsNotPressed()),
+                        Task.pause(1500)
+                ),
+                Task.until(() -> r.intake.finIsNotPressed()),
+                r.launcher.addSpinIndexAndWait(2),
+                Task.once(r.intake::stop),
+                rawMove(r, 0.0),
+                r.moveBy(36, 10, 0.5),
+                r.faceDir(-55, 0.45),
+                r.launchMotif()
+//                 rawMove(r, -0.3, x -> x < 0),
+//                 r.launcher.addSpinIndexAndWait(2),
+//                 rawMove(r, -0.3, x -> x < -4),
+//                 r.moveBy(30, 13, 0.6),
+//                 Task.once(r.intake::stop),
+//                r.moveBy(-24, -24, 0.5)
         );
         r.runTask(t);
     }
@@ -79,6 +98,10 @@ public class RipAutonomous {
         public void runOpMode() {
             basicParkingSide(this, -1.0);
         }
+    }
+
+    private static Task rawMove(Robot r, double power) {
+        return Task.once(() -> r.drivetrain.move(0, power, 0));
     }
 
     private static Task rawMove(Robot r, double power, Function<Double, Boolean> f) {
