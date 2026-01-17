@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 public class Robot {
@@ -10,7 +9,7 @@ public class Robot {
     public final Odometry odometry;
     public final Intake intake;
     public final Launcher launcher;
-    public final Limelight3A camera;
+    public final Camera camera;
 
     public final Box.Int motif = Box.Int.of(0);
 
@@ -31,7 +30,8 @@ public class Robot {
         drivetrain = new Drivetrain(opMode);
         intake = new Intake(opMode);
         launcher = new Launcher(opMode, this);
-        camera = opMode.hardwareMap.get(Limelight3A.class, "camera");
+        camera = new Camera(opMode);
+        // camera = opMode.hardwareMap.get(Limelight3A.class, "camera");
     }
 
     private final static Task.ControlFlow CONTINUE = Task.CONTINUE;
@@ -136,6 +136,21 @@ public class Robot {
             }
             if (normalized > 0) drivetrain.move(0, 0, 1);
             else if (normalized < 0) drivetrain.move(0, 0, -1);
+            return CONTINUE;
+        });
+    }
+
+    public Task faceClosestGoal() {
+        double range = 5;
+
+        return Task.of(() -> {
+            double[] curr = camera.fiducialGetTarget();
+            if (curr == null) return BREAK;
+
+            if (curr[0] >= -range && curr[0] <= range) return BREAK;
+            // if (Util.clamp(curr[0], -0.5, 0.5) == curr[0]) return BREAK;
+
+            drivetrain.move(0, 0, 0.3 * (curr[0] / Math.abs(curr[0]) ));
             return CONTINUE;
         });
     }

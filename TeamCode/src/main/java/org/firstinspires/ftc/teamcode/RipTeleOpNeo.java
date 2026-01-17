@@ -12,7 +12,10 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 public class RipTeleOpNeo extends LinearOpMode {
     @Override
     public void runOpMode() {
+        // Camera camera = new Camera(this);
         Robot r = new Robot(this, 0);
+
+        r.camera.start();
 
         Task.Pool pool = r.pool;
 
@@ -25,7 +28,7 @@ public class RipTeleOpNeo extends LinearOpMode {
             double axial = gamepad1.left_stick_y;
             double strafe = gamepad1.left_stick_x;
             double turn = gamepad1.right_stick_x;
-            r.drivetrain.move(strafe, axial, 0.7 * turn);
+            if (!r.pool.has("FaceGoal")) r.drivetrain.move(strafe, axial, 0.7 * turn);
 
             // ========== Intake ===========
             if ((gamepad1.right_bumper || gamepad2.right_trigger > 0.1) && intakeEnabled.get()) {
@@ -171,6 +174,11 @@ public class RipTeleOpNeo extends LinearOpMode {
                 ));
             }
 
+            if (gamepad2.xWasPressed()) {
+                if (r.pool.has("FaceGoal")) r.pool.remove("FaceGoal");
+                else r.pool.forceAdd("FaceGoal", r.faceClosestGoal());
+            }
+
             intakeFinPrevState.set(r.intake.finIsNotPressed());
 
             telemetry.addData("Garage position", r.launcher.garageDoorGetPosition());
@@ -185,6 +193,8 @@ public class RipTeleOpNeo extends LinearOpMode {
             telemetry.addData("Intake Fin Pressed", r.intake.finIsNotPressed());
 
             telemetry.addData("Number of Balls", numBalls.get());
+
+            r.camera.report();
 
             return Task.CONTINUE;
         });
