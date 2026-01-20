@@ -50,7 +50,7 @@ public class Launcher {
 
         feedDown();
         spindexerSetIndex(0);
-        launchProfileSet(LaunchProfile.DEFAULT);
+        setLaunchProfile(LaunchProfile.DEFAULT);
     }
 
     /* LOCK */
@@ -91,8 +91,7 @@ public class Launcher {
 
     /* FLYWHEEL */
     public boolean flywheelReady() {
-        double rpm = flywheelGetRpm();
-        return Math.abs(rpm - launchProfile.rpm) < 2;
+        return Math.abs(flywheelGetError()) < 50;
     }
 
     public void flywheelRunWithPower(double power) {
@@ -101,8 +100,15 @@ public class Launcher {
         flywheel.setPower(power);
     }
 
+    private double flywheelGetError() {
+        return flywheel.getVelocity() - launchProfile.velocity;
+    }
+
     public void flywheelStart() {
-        flywheelRunWithPower(launchProfile.power);
+        final double P = 180, K_V = 0.0068;
+        PIDFCoefficients coefs = new PIDFCoefficients(P, 0, 0, K_V * launchProfile.velocity);
+        flywheel.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, coefs);
+        flywheel.setVelocity(launchProfile.velocity);
     }
 
     public void flywheelReverse() {
@@ -110,6 +116,7 @@ public class Launcher {
     }
 
     public void flywheelStop() {
+        flywheel.setVelocity(0.0);
         flywheel.setPower(0.0);
     }
 
@@ -119,12 +126,16 @@ public class Launcher {
         return Math.abs((ticksPerSecond / ticksPerRev) * 60.0);
     }
 
+    public double flywheelGetVelocity() {
+        return flywheel.getVelocity();
+    }
+
     public void flywheelDisplayRpm() {
         double v = flywheel.getVelocity();
         if (v <= 0) {
             rpmIndicator.setPosition(0); // Off
         }
-        else if (v < LAUNCHER_TARGET_VELOCITY - 30) {
+        else if (!flywheelReady()) {
             rpmIndicator.setPosition(0.333); // Orange
         }
         else {
@@ -261,26 +272,24 @@ public class Launcher {
     private static final double GARAGE_POSITION_FAR = 0.3289;
 
     public enum LaunchProfile {
-        DEFAULT(GARAGE_POSITION_NEAR, 0.80, 40),
-        NEAR(GARAGE_POSITION_NEAR, 0.75, 37),
-        FAR(GARAGE_POSITION_FAR, 1.0, 50),
-        AUTONOMOUS(GARAGE_POSITION_NEAR, 0.70, 34),
-        AUTONOMOUS_FAR(0.3189, 1.0, 50);
+        DEFAULT(GARAGE_POSITION_NEAR, 1860),
+        NEAR(GARAGE_POSITION_NEAR, 1760),
+        FAR(GARAGE_POSITION_FAR, 2300),
+        AUTONOMOUS(GARAGE_POSITION_NEAR, 1700),
+        AUTONOMOUS_FAR(0.3189, 2300);
 
         private final double garagePos;
-        private final double power;
-        private final double rpm;
+        private final double velocity;
 
-        LaunchProfile(double garagePos, double power, double rpm) {
+        LaunchProfile(double garagePos, double velocity) {
             this.garagePos = garagePos;
-            this.power = power;
-            this.rpm = rpm;
+            this.velocity = velocity;
         }
     }
 
     private LaunchProfile launchProfile = LaunchProfile.DEFAULT;
 
-    public void launchProfileSet(LaunchProfile profile) {
+    public void setLaunchProfile(LaunchProfile profile) {
         garageDoorSetPosition(profile.garagePos);
         this.launchProfile = profile;
     }
@@ -349,6 +358,10 @@ public class Launcher {
 
     private boolean servoIsAtPos(Servo servo, double position) {
         return Math.abs(servo.getPosition() - position) < 0.01;
+    }
+
+    public LaunchProfile getLaunchProfile() {
+        return launchProfile;
     }
 }
 
