@@ -28,6 +28,7 @@ public class RipTeleOpNeo extends LinearOpMode {
             double axial = gamepad1.left_stick_y;
             double strafe = gamepad1.left_stick_x;
             double turn = gamepad1.right_stick_x;
+            r.drivetrain.setFactor(1.0);
             if (!r.pool.has("FaceGoal")) r.drivetrain.move(strafe, axial, 0.7 * turn);
 
             // ========== Intake ===========
@@ -75,11 +76,11 @@ public class RipTeleOpNeo extends LinearOpMode {
             }
 
             if (gamepad1.yWasPressed()) {
-                r.launcher.launchProfileSet(Launcher.LaunchProfile.FAR);
+                r.launcher.setLaunchProfile(Launcher.LaunchProfile.FAR);
             } else if (gamepad1.bWasPressed()) {
-                r.launcher.launchProfileSet(Launcher.LaunchProfile.DEFAULT);
+                r.launcher.setLaunchProfile(Launcher.LaunchProfile.DEFAULT);
             } else if (gamepad1.aWasPressed()) {
-                  r.launcher.launchProfileSet(Launcher.LaunchProfile.NEAR);
+                  r.launcher.setLaunchProfile(Launcher.LaunchProfile.NEAR);
               }
             
             if (r.intake.finIsNotPressed()) {
@@ -184,6 +185,11 @@ public class RipTeleOpNeo extends LinearOpMode {
             telemetry.addData("Garage position", r.launcher.garageDoorGetPosition());
             telemetry.addData("Spindexer position", r.launcher.spindexerGetPosition());
             telemetry.addData("Launcher RPM", r.launcher.flywheelGetRpm());
+            telemetry.addData("Launcher velocity", r.launcher.flywheelGetVelocity());
+
+            // V_NEAR = 1760
+            // V_NORMAL = 1860
+            // V_FAR = 2320
 
             Hsv cs = r.launcher.colorSensorGetColors();
             telemetry.addData("Detected color", "hsv(%f, %f, %f)", cs.h, cs.s, cs.v);

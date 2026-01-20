@@ -141,18 +141,29 @@ public class Robot {
     }
 
     public Task faceClosestGoal() {
-        double range = 5;
+        // double range = 5;
 
-        return Task.of(() -> {
-            double[] curr = camera.fiducialGetTarget();
-            if (curr == null) return BREAK;
+        return Task.lazy(() -> {
+            double[] target = camera.fiducialGetTarget();
+            if (target == null) return Task.of(() -> Task.ControlFlow.BREAK);
 
-            if (curr[0] >= -range && curr[0] <= range) return BREAK;
-            // if (Util.clamp(curr[0], -0.5, 0.5) == curr[0]) return BREAK;
+            double error = target[0];
+            double adjust = this.launcher.getLaunchProfile() == Launcher.LaunchProfile.FAR ? -4 : 0;
 
-            drivetrain.move(0, 0, 0.3 * (curr[0] / Math.abs(curr[0]) ));
-            return CONTINUE;
+            Task delegate = faceDir(this.odometry.directionNormalized() - error + adjust, 0.2);
+            return Task.of(() -> {}, delegate::run, () -> this.drivetrain.setFactor(1.0));
         });
+
+//        return Task.of(() -> {
+//            double[] curr = camera.fiducialGetTarget();
+//            if (curr == null) return BREAK;
+//
+//            if (curr[0] >= -range && curr[0] <= range) return BREAK;
+//            // if (Util.clamp(curr[0], -0.5, 0.5) == curr[0]) return BREAK;
+//
+//            drivetrain.move(0, 0, 0.3 * (curr[0] / Math.abs(curr[0]) ));
+//            return CONTINUE;
+//        });
     }
 
     public Task launchOne() {
@@ -166,7 +177,7 @@ public class Robot {
         );
     }
 
-    public Task launchMotif() {
+    public Task launchMotif(int offset) {
 
         return Task.sequence(
                 // Task.once(() -> launcher.spinSetMode(Launcher.SpinMode.LAUNCH)),
@@ -175,7 +186,7 @@ public class Robot {
                 // Green 2 --> 5
                 // TODO: handle different green position
 
-                Task.lazy(() -> launcher.setSpinIndexAndWait(3 - 2 * this.motif.get())),
+                Task.lazy(() -> launcher.setSpinIndexAndWait(3 - 2 * (this.motif.get() - offset))),
                 Task.once(launcher::flywheelStart),
                 launchOne(),
                 launchOne(),
