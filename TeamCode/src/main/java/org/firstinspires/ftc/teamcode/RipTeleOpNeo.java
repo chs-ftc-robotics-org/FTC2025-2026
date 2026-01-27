@@ -22,6 +22,7 @@ public class RipTeleOpNeo extends LinearOpMode {
         Box<Boolean> intakeFinPrevState = Box.of(true);
         Box<Boolean> intakeEnabled = Box.of(true);
         Box<Integer> numBalls = Box.of(0);
+        Box<Boolean> liveFaceGoalEnabled = Box.of(false);
 
         Task mainControl = Task.of(() -> {
             // ========= Movement ==========
@@ -29,7 +30,14 @@ public class RipTeleOpNeo extends LinearOpMode {
             double strafe = gamepad1.left_stick_x;
             double turn = gamepad1.right_stick_x;
             r.drivetrain.setFactor(1.0);
-            if (!r.pool.has("FaceGoal")) r.drivetrain.move(strafe, axial, 0.7 * turn);
+            if (Math.abs(axial) + Math.abs(strafe) + Math.abs(turn) > 0.05) {
+//                r.pool.remove("LiveFaceGoal");
+                liveFaceGoalEnabled.set(false);
+                r.drivetrain.move(strafe, axial, 0.7 * turn);
+            }
+            else if (!liveFaceGoalEnabled.get()) {
+                r.drivetrain.stop();
+            }
 
             // ========== Intake ===========
             if ((gamepad1.right_bumper || gamepad2.right_trigger > 0.1) && intakeEnabled.get()) {
@@ -180,8 +188,27 @@ public class RipTeleOpNeo extends LinearOpMode {
                 else r.pool.forceAdd("FaceGoal", r.faceClosestGoal());
             }
 
+            if (gamepad1.xWasPressed()) {
+//                if (liveFaceGoalEnabled.get()) {
+//                    r.pool.remove("LiveFaceGoal");
+//                    liveFaceGoalEnabled.set(false);
+//                }
+//                else {
+//                    r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal());
+//                    liveFaceGoalEnabled.set(true);
+//                }
+//                if (r.pool.has("LiveFaceGoal")) r.pool.remove("LiveFaceGoal");
+//                else r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal());
+                liveFaceGoalEnabled.set(!liveFaceGoalEnabled.get());
+            }
+
+            if (liveFaceGoalEnabled.get()) {
+                r.pool.forceAdd("FaceGoal", r.faceClosestGoal());
+            }
+
             intakeFinPrevState.set(r.intake.finIsNotPressed());
 
+            telemetry.addData("Live Correction Enabled", liveFaceGoalEnabled.get());
             telemetry.addData("Garage position", r.launcher.garageDoorGetPosition());
             telemetry.addData("Spindexer position", r.launcher.spindexerGetPosition());
             telemetry.addData("Launcher RPM", r.launcher.flywheelGetRpm());

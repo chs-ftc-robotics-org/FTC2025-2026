@@ -44,6 +44,10 @@ public class Util {
         double result = a - Math.floor(a / b) * b;
         return result == b ? 0 : result;
     }
+
+    public static double sq(double x) {
+        return x * x;
+    }
 }
 
 class Rgb {

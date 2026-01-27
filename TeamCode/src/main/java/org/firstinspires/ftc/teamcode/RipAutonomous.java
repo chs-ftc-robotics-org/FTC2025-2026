@@ -13,19 +13,22 @@ public class RipAutonomous {
                 r.faceDir(side * 10, 0.6),
 
                 r.fetchMotif(),
-                r.faceDir(side * -45, 0.6),
+                Task.once(() -> r.launcher.flywheelRunWithPower(0.7)),
+
+                r.faceDir(side * -43, 0.6),
                 r.faceClosestGoal(),
                 Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS)),
                 r.launchMotif(0),
-                r.moveBy(side * -3, -10, 0.5),
-                r.faceDir(side * -90, 0.4),
+                r.moveBy(side * -3, -12, 0.5),
+                r.faceDir(side * -90, 0.35),
                 // r.moveBy(0, -13, 0.6),
                 doIntake(r),
                 rawMove(r, 0.0),
-                r.moveBy(36, 10, 0.5),
-                r.faceDir(-55, 0.45),
+                r.moveBy(side * 36, 10, 0.5),
+                r.faceDir(side * -50, 0.45),
+                r.faceClosestGoal(),
                 r.launchMotif(2),
-                r.moveBy(-24, -24, 0.5)
+                r.moveBy(side * -16, -16, 0.5)
 //                 rawMove(r, -0.3, x -> x < 0),
 //                 r.launcher.addSpinIndexAndWait(2),
 //                 rawMove(r, -0.3, x -> x < -4),
@@ -38,16 +41,27 @@ public class RipAutonomous {
 
     private static void basicParkingSide(LinearOpMode opMode, double side) {
         Robot r = new Robot(opMode, 0);
+        double[] pos = {0.0, 0.0};
         Task t = Task.sequence(
                 r.fetchMotif(),
+                Task.once(() -> r.launcher.flywheelRunWithPower(0.9)),
+
                 Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS_FAR)),
-                r.moveBy(0, 1.5, 0.3),
+                r.moveBy(0, 1.2, 0.3),
                 r.faceDir(side * -23.5, 0.3),
                 // r.faceClosestGoal(),
                 r.launchMotif(0),
                 r.faceDir(side * -90, 0.4),
-                r.moveBy(-10, 24, 0.6),
-                doIntake(r)
+                r.moveBy(side * -10, 23, 0.6),
+                Task.once(() -> { pos[0] = r.odometry.posX(); pos[1] = r.odometry.posY(); }),
+                doIntake(r),
+                Task.lazy(() -> r.moveTo(pos[0], pos[1], 0.6)),
+                r.moveBy(side * 10, -24, 0.6),
+                r.faceDir(side * -23.5, 0.4),
+                Task.pause(500),
+                r.launchMotif(0),
+                r.moveBy(side * -5, 12, 0.6)
+
 //                r.moveBy()
 //                r.moveTo(-10, 10, 0.5),
 //                r.moveTo(0, 0, 0.2),
@@ -63,22 +77,38 @@ public class RipAutonomous {
         return Task.sequence(
                 Task.once(() -> r.launcher.spindexerSetIndex(0)),
                 Task.once(r.intake::start),
-                rawMove(r, -0.2),
+                rawMove(r, -0.15),
                 Task.until(() -> !r.intake.finIsNotPressed()),
+                Task.once(r.drivetrain::stop),
                 Task.until(r.intake::finIsNotPressed),
+                rawMove(r, -0.15),
+                Task.once(r.intake::stop),
                 r.launcher.addSpinIndexAndWait(2),
+                Task.once(r.intake::start),
                 Task.any(
+                    Task.sequence(
                         Task.until(() -> !r.intake.finIsNotPressed()),
-                        Task.pause(1000)
+                        Task.pause(500)
+                    ),
+                    Task.pause(1000)
                 ),
+                Task.once(r.drivetrain::stop),
                 Task.until(r.intake::finIsNotPressed),
+                rawMove(r, -0.15),
+                Task.once(r.intake::stop),
                 r.launcher.addSpinIndexAndWait(2),
+                Task.once(r.intake::start),
                 Task.any(
+                    Task.sequence(
                         Task.until(() -> !r.intake.finIsNotPressed()),
-                        Task.pause(1000)
+                        Task.pause(500)
+                    ),
+                    Task.pause(1000)
                 ),
+                Task.once(r.drivetrain::stop),
                 Task.until(r.intake::finIsNotPressed),
-                r.launcher.addSpinIndexAndWait(2),
+                Task.once(() -> r.launcher.spindexerAddIndex(2)),
+                // r.launcher.addSpinIndexAndWait(2),
                 Task.once(r.intake::stop)
         );
     }

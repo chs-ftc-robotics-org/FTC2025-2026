@@ -47,8 +47,8 @@ public class Robot {
             opMode.telemetry.addData("Motif", motif.get());
             opMode.telemetry.addData("Spin index", launcher.spindexerGetIndex());
             opMode.telemetry.addData("Active tasks", pool.activeTaskNames());
-            opMode.telemetry.addLine("===== Log =====");
-            opMode.telemetry.addLine(pool.getDebugLog());
+            // opMode.telemetry.addLine("===== Log =====");
+            // opMode.telemetry.addLine(pool.getDebugLog());
             opMode.telemetry.update();
 
             if (result == BREAK) break;
@@ -166,13 +166,28 @@ public class Robot {
 //        });
     }
 
-    public Task launchOne() {
+    public Task liveFaceGoal() {
         return Task.sequence(
-                Task.until(launcher::flywheelReady),
+                Task.any(
+                    faceClosestGoal(),
+                    Task.pause(250)
+                ),
+                Task.once(() -> pool.forceAdd("LiveFaceGoal", liveFaceGoal()))
+        );
+    }
+
+    public Task launchOne(int millis) {
+        return Task.sequence(
+                // Task.until(launcher::flywheelReady),
+                launcher.flywheelReadyTimeout(millis),
                 Task.once(launcher::feedUp),
-                Task.pause(500),
+                Task.pause(300),
                 Task.once(launcher::feedDown),
-                Task.pause(500),
+                Task.pause(300),
+                Task.once(launcher::feedUp),
+                Task.pause(300),
+                Task.once(launcher::feedDown),
+                Task.pause(300),
                 launcher.addSpinIndexAndWait(2)
         );
     }
@@ -188,10 +203,10 @@ public class Robot {
 
                 Task.lazy(() -> launcher.setSpinIndexAndWait(3 - 2 * (this.motif.get() - offset))),
                 Task.once(launcher::flywheelStart),
-                launchOne(),
-                launchOne(),
-                launchOne(),
-                Task.once(launcher::flywheelStop)
+                launchOne(2500),
+                launchOne(1500),
+                launchOne(1500),
+                Task.once(() -> launcher.flywheelRunWithPower(0.7)) // Less time to rev up
         );
     }
 

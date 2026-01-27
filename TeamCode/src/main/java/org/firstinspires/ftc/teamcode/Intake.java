@@ -27,11 +27,11 @@ public class Intake {
     }
 
     public void start() {
-        motor.setPower(-0.7);
+        motor.setPower(-1.0);
     }
 
     public void reverse() {
-        motor.setPower(0.9);
+        motor.setPower(1.0);
     }
 
     public void stop() {

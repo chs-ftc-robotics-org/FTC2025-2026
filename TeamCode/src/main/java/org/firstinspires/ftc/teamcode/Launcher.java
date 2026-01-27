@@ -94,6 +94,13 @@ public class Launcher {
         return Math.abs(flywheelGetError()) < 50;
     }
 
+    public Task flywheelReadyTimeout(int millis) {
+        return Task.any(
+                Task.until(this::flywheelReady),
+                Task.pause(millis)
+        );
+    }
+
     public void flywheelRunWithPower(double power) {
         spinSetMode(SpinMode.LAUNCH);
         // motor.setVelocity(TARGET_VELOCITY);
@@ -269,14 +276,14 @@ public class Launcher {
     private static final double GARAGE_POSITION_MAX = 0.7294;
     private static final double GARAGE_POSITION_MIN = 0.2950;
     private static final double GARAGE_POSITION_NEAR = 0.7294;
-    private static final double GARAGE_POSITION_FAR = 0.3289;
+    private static final double GARAGE_POSITION_FAR = 0.3089;
 
     public enum LaunchProfile {
         DEFAULT(GARAGE_POSITION_NEAR, 1860),
         NEAR(GARAGE_POSITION_NEAR, 1760),
         FAR(GARAGE_POSITION_FAR, 2300),
         AUTONOMOUS(GARAGE_POSITION_NEAR, 1700),
-        AUTONOMOUS_FAR(0.3189, 2300);
+        AUTONOMOUS_FAR(0.3209, 2240);
 
         private final double garagePos;
         private final double velocity;
@@ -315,20 +322,77 @@ public class Launcher {
     }
 
     public ColorSensorDetection colorSensorGetDetection() {
-        if (colorSensorGetProximity() > 60) {
-            return ColorSensorDetection.EMPTY;
-        }
-        else {
-            if (colorSensorGetColors().v < 0.4) {
-                return ColorSensorDetection.EMPTY;
-            }
+//        if (colorSensorGetProximity() > 60) {
+//            return ColorSensorDetection.EMPTY;
+//        }
+//        else {
+//            if (colorSensorGetColors().v < 0.4) {
+//                return ColorSensorDetection.EMPTY;
+//            }
+//
+//            if (colorSensorGetColors().h < 185) {
+//                return ColorSensorDetection.GREEN;
+//            }
+//            else {
+//                return ColorSensorDetection.PURPLE;
+//            }
+//        }
 
-            if (colorSensorGetColors().h < 185) {
-                return ColorSensorDetection.GREEN;
+//        if (colorSensorGetProximity() > 45) {
+//            return ColorSensorDetection.EMPTY;
+//        }
+//        else {
+//            if (colorSensorGetColors().h > 180) {
+//                return ColorSensorDetection.PURPLE;
+//            }
+//
+//            if
+//        }
+        Hsv color = colorSensorGetColors();
+        double proximity = colorSensorGetProximity();
+        return ColorSensorDetectionData.identify(color.h, color.s, color.v, proximity);
+    }
+
+    private enum ColorSensorDetectionData {
+        GREEN(160, 0.57, 0.73, 32),
+        PURPLE(205, 0.415, 0.76, 32),
+        EMPTY(165, 0.435, 0.53, 40);
+
+        private double h;
+        private double s;
+        private double v;
+        private double p;
+
+        ColorSensorDetectionData(double h, double s, double v, double p) {
+            this.h = h;
+            this.s = s;
+            this.v = v;
+            this.p = p;
+        }
+
+        private ColorSensorDetection toDetection() {
+            switch (this) {
+                case PURPLE:
+                    return ColorSensorDetection.PURPLE;
+                case GREEN:
+                    return ColorSensorDetection.GREEN;
+                case EMPTY:
+                default:
+                    return ColorSensorDetection.EMPTY;
             }
-            else {
-                return ColorSensorDetection.PURPLE;
+        }
+
+        private static ColorSensorDetection identify(double h, double s, double v, double p) {
+            double closest = Double.POSITIVE_INFINITY;
+            ColorSensorDetection result = ColorSensorDetection.EMPTY;
+            for (ColorSensorDetectionData c : values()) {
+                double distanceSq = Util.sq(c.h - h) + Util.sq(c.s - s) + Util.sq(c.v - v) + Util.sq(c.p - p);
+                if (distanceSq < closest) {
+                    closest = distanceSq;
+                    result = c.toDetection();
+                }
             }
+            return result;
         }
     }
 
@@ -379,6 +443,12 @@ Color Sensor Data:
 GREEN: 160, 0.63, 0.60; 44 mm
 PURPLE: 212, 0.44, 0.56; 44 mm
 BLANK: 170, 0.43, 0.28; 64 mm
+
+Color Sensor Data NEWNEWNEWNEW:
+GREEN: 160, 0.59, 0.56; 35 ~ 40 mm
+PURPLE: 205.26, 0.43, 0.69; 35 ~ 40 mm
+BLANK: 166 +- 2, 0.44, 0.45; 49 mm
+
  */
 
 /* Christopher was here */
