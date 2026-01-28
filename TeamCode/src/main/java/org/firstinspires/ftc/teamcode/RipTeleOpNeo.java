@@ -31,8 +31,9 @@ public class RipTeleOpNeo extends LinearOpMode {
             double turn = gamepad1.right_stick_x;
             r.drivetrain.setFactor(1.0);
             if (Math.abs(axial) + Math.abs(strafe) + Math.abs(turn) > 0.05) {
-//                r.pool.remove("LiveFaceGoal");
                 liveFaceGoalEnabled.set(false);
+                r.pool.remove("LiveFaceGoal");
+                r.pool.remove("AutoPower");
                 r.drivetrain.move(strafe, axial, 0.7 * turn);
             }
             else if (!liveFaceGoalEnabled.get()) {
@@ -183,30 +184,22 @@ public class RipTeleOpNeo extends LinearOpMode {
                 ));
             }
 
-            if (gamepad2.xWasPressed()) {
-                if (r.pool.has("FaceGoal")) r.pool.remove("FaceGoal");
-                else r.pool.forceAdd("FaceGoal", r.faceClosestGoal());
-            }
-
             if (gamepad1.xWasPressed()) {
-//                if (liveFaceGoalEnabled.get()) {
-//                    r.pool.remove("LiveFaceGoal");
-//                    liveFaceGoalEnabled.set(false);
-//                }
-//                else {
-//                    r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal());
-//                    liveFaceGoalEnabled.set(true);
-//                }
-//                if (r.pool.has("LiveFaceGoal")) r.pool.remove("LiveFaceGoal");
-//                else r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal());
                 liveFaceGoalEnabled.set(!liveFaceGoalEnabled.get());
-            }
 
-            if (liveFaceGoalEnabled.get()) {
-                r.pool.forceAdd("FaceGoal", r.faceClosestGoal());
+                if (liveFaceGoalEnabled.get()) {
+                    r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal());
+                    r.pool.forceAdd("AutoPower", r.autoPower());
+                } else {
+                    r.pool.remove("LiveFaceGoal");
+                    r.pool.remove("AutoPower");
+                }
             }
 
             intakeFinPrevState.set(r.intake.finIsNotPressed());
+
+            Coordinate2D botpose = r.camera.botposeGetEstimate();
+            if (botpose != null) telemetry.addData("Est Bot Pose", "(%f, %f)", botpose.x(), botpose.y());
 
             telemetry.addData("Live Correction Enabled", liveFaceGoalEnabled.get());
             telemetry.addData("Garage position", r.launcher.garageDoorGetPosition());
@@ -228,6 +221,7 @@ public class RipTeleOpNeo extends LinearOpMode {
             telemetry.addData("Number of Balls", numBalls.get());
 
             r.camera.report();
+            // r.launcher.handleGarageDoorSpecialCases();
 
             return Task.CONTINUE;
         });

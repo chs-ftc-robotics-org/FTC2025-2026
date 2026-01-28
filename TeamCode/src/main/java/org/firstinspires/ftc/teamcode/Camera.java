@@ -50,13 +50,27 @@ public class Camera {
         return s.toString();
     }
 
-    public double[] fiducialGetTarget() {
+    public Coordinate2D fiducialGetTarget() {
         LLResult r = limelight.getLatestResult();
         if (r == null || !r.isValid()) return null;
         for (LLResultTypes.FiducialResult f : r.getFiducialResults()) {
             if (f.getFiducialId() != 20 && f.getFiducialId() != 24) continue;
 
-            return new double[] { f.getTargetXDegrees(), f.getTargetYDegrees() };
+            return new Coordinate2D(f.getTargetXDegrees(), f.getTargetYDegrees());
+            // return new double[] { f.getTargetXDegrees(), f.getTargetYDegrees() };
+        }
+
+        return null;
+    }
+
+    public Coordinate2D botposeGetEstimate() {
+        LLResult result = getLatestResult();
+        if (result != null && result.isValid()) {
+            Pose3D botpose = result.getBotpose();
+            if (botpose != null) {
+                return new Coordinate2D(botpose.getPosition().x, botpose.getPosition().y);
+                // telemetry.addData("MT1 Location", "(" + x + ", " + y + ")");
+            }
         }
 
         return null;

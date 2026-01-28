@@ -104,3 +104,16 @@ class Hsv {
         return new Rgb((short) (r * 255), (short) (g * 255), (short) (b * 255));
     }
 }
+
+class Coordinate2D {
+    private final double x;
+    private final double y;
+
+    public Coordinate2D(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public double x() { return x; }
+    public double y() { return y; }
+}

@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -10,7 +11,12 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
+@Config
 public class Launcher {
+    public static double CALI_GARAGE_DOOR_POS = 0.7294;
+    public static double CALI_VELOCITY = 1800;
+    public static double DYNAMIC_GARAGE_DOOR_POS = 0.7294;
+    public static double DYNAMIC_VELOCITY = 1700;
     private final Robot robot;
     private final OpMode opMode;
 
@@ -107,15 +113,33 @@ public class Launcher {
         flywheel.setPower(power);
     }
 
+    private double flywheelTargetVelocity() {
+        if (launchProfile == LaunchProfile.CALIBRATION) {
+            return CALI_VELOCITY;
+        } else if (launchProfile == LaunchProfile.DYNAMIC) {
+            return DYNAMIC_VELOCITY;
+        }
+
+        return launchProfile.velocity;
+    }
+
     private double flywheelGetError() {
-        return flywheel.getVelocity() - launchProfile.velocity;
+        return flywheel.getVelocity() - flywheelTargetVelocity();
     }
 
     public void flywheelStart() {
         final double P = 180, K_V = 0.0068;
         PIDFCoefficients coefs = new PIDFCoefficients(P, 0, 0, K_V * launchProfile.velocity);
         flywheel.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, coefs);
-        flywheel.setVelocity(launchProfile.velocity);
+        if (launchProfile == LaunchProfile.CALIBRATION) {
+            flywheel.setVelocity(CALI_VELOCITY);
+        }
+        else if (launchProfile == LaunchProfile.DYNAMIC) {
+            flywheel.setVelocity(DYNAMIC_VELOCITY);
+        }
+        else {
+            flywheel.setVelocity(launchProfile.velocity);
+        }
     }
 
     public void flywheelReverse() {
@@ -275,15 +299,17 @@ public class Launcher {
     /* GARAGE DOOR */
     private static final double GARAGE_POSITION_MAX = 0.7294;
     private static final double GARAGE_POSITION_MIN = 0.2950;
-    private static final double GARAGE_POSITION_NEAR = 0.7294;
-    private static final double GARAGE_POSITION_FAR = 0.3089;
+    public static final double GARAGE_POSITION_NEAR = 0.7294;
+    public static final double GARAGE_POSITION_FAR = 0.3089;
 
     public enum LaunchProfile {
         DEFAULT(GARAGE_POSITION_NEAR, 1860),
         NEAR(GARAGE_POSITION_NEAR, 1760),
         FAR(GARAGE_POSITION_FAR, 2300),
         AUTONOMOUS(GARAGE_POSITION_NEAR, 1700),
-        AUTONOMOUS_FAR(0.3209, 2240);
+        AUTONOMOUS_FAR(0.3209, 2240),
+        DYNAMIC(DYNAMIC_GARAGE_DOOR_POS, DYNAMIC_VELOCITY),
+        CALIBRATION(CALI_GARAGE_DOOR_POS, CALI_VELOCITY);
 
         private final double garagePos;
         private final double velocity;
@@ -296,8 +322,20 @@ public class Launcher {
 
     private LaunchProfile launchProfile = LaunchProfile.DEFAULT;
 
+//    public void handleGarageDoorSpecialCases() {
+//        if (this.launchProfile == LaunchProfile.CALIBRATION) {
+//            garageDoorSetPosition(Util.clamp(CALI_GARAGE_DOOR_POS, GARAGE_POSITION_MIN, GARAGE_POSITION_MAX));
+//        } else if (this.launchProfile == LaunchProfile.DYNAMIC) {
+//            garageDoorSetPosition(Util.clamp(DYNAMIC_GARAGE_DOOR_POS, GARAGE_POSITION_MIN, GARAGE_POSITION_MAX));
+//        }
+//    }
+
     public void setLaunchProfile(LaunchProfile profile) {
-        garageDoorSetPosition(profile.garagePos);
+        if (this.launchProfile == LaunchProfile.DYNAMIC) {
+            garageDoorSetPosition(Util.clamp(DYNAMIC_GARAGE_DOOR_POS, GARAGE_POSITION_MIN, GARAGE_POSITION_MAX));
+        } else {
+            garageDoorSetPosition(profile.garagePos);
+        }
         this.launchProfile = profile;
     }
 
