@@ -55,6 +55,7 @@ public class RipTeleOpNeo extends LinearOpMode {
             // ========= Launcher ==========
             if (gamepad2.y) {
                 r.launcher.feedUp();
+                r.ballTracker.removeBall(r.launcher.spindexerGetIndex());
             }
             else {
                 r.launcher.feedDown();
@@ -79,9 +80,11 @@ public class RipTeleOpNeo extends LinearOpMode {
 
             if (gamepad1.dpadUpWasPressed()) {
                 r.launcher.garageDoorRotate(-0.01);
+                // r.launcher.spindexerRotate(0.001);
             }
             else if (gamepad1.dpadDownWasPressed()) {
                 r.launcher.garageDoorRotate(0.01);
+                // r.launcher.spindexerRotate(-0.001);
             }
 
             if (gamepad1.yWasPressed()) {
@@ -177,6 +180,7 @@ public class RipTeleOpNeo extends LinearOpMode {
 //                    numBalls.set(Math.min(numBalls.get() + 1, 3));
 //                }
 
+                r.ballTracker.addBall(r.launcher.spindexerGetIndex(), r.intake.colorSensorGetDetection());
                 r.launcher.spindexerAddIndex(2);
                 pool.forceAdd("EnableIntake", Task.sequence(
                         Task.pause(700),
@@ -196,11 +200,21 @@ public class RipTeleOpNeo extends LinearOpMode {
                 }
             }
 
+            if (gamepad2.xWasPressed()) {
+                r.pool.forceAdd("DisplayMotif", Task.sequence(
+                        r.fetchMotif(),
+                        Task.once(() -> r.motifLeds.displayMotif(r.motif.get()))
+                ));
+            }
+
             intakeFinPrevState.set(r.intake.finIsNotPressed());
 
             Coordinate2D botpose = r.camera.botposeGetEstimate();
             if (botpose != null) telemetry.addData("Est Bot Pose", "(%f, %f)", botpose.x(), botpose.y());
 
+            telemetry.addData("Balls", "[%s]", r.ballTracker.getCurrentBalls());
+
+            // telemetry.addData("Detected Motif ID", r.motif.get() + 21);
             telemetry.addData("Live Correction Enabled", liveFaceGoalEnabled.get());
             telemetry.addData("Garage position", r.launcher.garageDoorGetPosition());
             telemetry.addData("Spindexer position", r.launcher.spindexerGetPosition());
@@ -211,10 +225,15 @@ public class RipTeleOpNeo extends LinearOpMode {
             // V_NORMAL = 1860
             // V_FAR = 2320
 
-            Hsv cs = r.launcher.colorSensorGetColors();
-            telemetry.addData("Detected color", "hsv(%f, %f, %f)", cs.h, cs.s, cs.v);
-            telemetry.addData("Proximity", r.launcher.colorSensorGetProximity());
-            telemetry.addData("Detected Ball Color", r.launcher.colorSensorGetDetection().name());
+            Hsv intakeColors = r.intake.colorSensorGetColors();
+            telemetry.addData("[INTAKE] Detected color", "hsv(%f, %f, %f)", intakeColors.h, intakeColors.s, intakeColors.v);
+            telemetry.addData("[INTAKE] Proximity", r.intake.colorSensorGetProximity());
+            telemetry.addData("[INTAKE] Detected color", r.intake.colorSensorGetDetection().name());
+
+            Hsv launcherColors = r.launcher.colorSensorGetColors();
+            telemetry.addData("[LAUNCHER] Detected color", "hsv(%f, %f, %f)", launcherColors.h, launcherColors.s, launcherColors.v);
+            telemetry.addData("[LAUNCHER] Proximity", r.launcher.colorSensorGetProximity());
+            telemetry.addData("[LAUNCHER] Detected Ball Color", r.launcher.colorSensorGetDetection().name());
 
             telemetry.addData("Intake Fin Pressed", r.intake.finIsNotPressed());
 

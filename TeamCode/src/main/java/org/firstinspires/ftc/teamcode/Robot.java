@@ -12,6 +12,8 @@ public class Robot {
     public final Intake intake;
     public final Launcher launcher;
     public final Camera camera;
+    public final MotifLedStrip motifLeds;
+    public final SpindexerBallTracker ballTracker;
 
     public final Box.Int motif = Box.Int.of(0);
 
@@ -33,7 +35,8 @@ public class Robot {
         intake = new Intake(opMode);
         launcher = new Launcher(opMode, this);
         camera = new Camera(opMode);
-        // camera = opMode.hardwareMap.get(Limelight3A.class, "camera");
+        motifLeds = new MotifLedStrip(opMode);
+        ballTracker = new SpindexerBallTracker();
     }
 
     private final static Task.ControlFlow CONTINUE = Task.CONTINUE;
@@ -209,9 +212,9 @@ public class Robot {
         return Task.of(() -> {}, () -> { delegate.run(); return CONTINUE; }, drivetrain::stop);
     }
 
-    private static final double[] DISTANCES = new double[] { 0.34885527085, 0.607453701939, 0.992018144995, 1.66760307028 };
+    private static final double[] DISTANCES = new double[] { 0.34885527085, 0.648151216924, 0.992018144995, 1.66760307028 };
     private static final double[] POWERS = new double[] { 1700, 1700, 1860, 2300 };
-    private final double[] GARAGE_DOOR_POSITIONS = new double[] { 0.7294, 0.7294, 0.7294, 0.3089 };
+    private final double[] GARAGE_DOOR_POSITIONS = new double[] { 0.7294, 0.7294, 0.7294, 0.3489 };
 
     public double[] findIdealLauncherSettings(Coordinate2D c) {
         double dist = Math.sqrt(Math.pow((-1.3 - c.x()), 2) + Math.pow(1.19 - c.y(), 2));
