@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
 public class Intake {
@@ -12,12 +13,18 @@ public class Intake {
 
     private final TouchSensor fin;
 
+    private final DistanceSensor leftDist;
+    private final DistanceSensor rightDist;
+
     public Intake(OpMode opMode) {
         motor = opMode.hardwareMap.dcMotor.get("intake");
         motor.setDirection(DcMotorSimple.Direction.REVERSE);
         motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         fin = opMode.hardwareMap.get(TouchSensor.class, "touch");
+
+        leftDist = opMode.hardwareMap.get(DistanceSensor.class, "intake/distance/left");
+        rightDist = opMode.hardwareMap.get(DistanceSensor.class, "intake/distance/right");
 
         opMode.telemetry.addLine("Intake initialized");
     }

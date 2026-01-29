@@ -46,7 +46,7 @@ public class Launcher {
         garageDoor = opMode.hardwareMap.get(Servo.class, "launcher/garageDoor");
         rpmIndicator = opMode.hardwareMap.get(Servo.class, "launcher/rpmIndicator");
         launchBallIndicator = opMode.hardwareMap.get(Servo.class, "launcher/ballColor");
-        colorSensor = opMode.hardwareMap.get(RevColorSensorV3.class, "color");
+        colorSensor = opMode.hardwareMap.get(RevColorSensorV3.class, "launcher/color");
 
         flywheel.setDirection(DcMotorSimple.Direction.REVERSE);
         // motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -392,9 +392,9 @@ public class Launcher {
     }
 
     private enum ColorSensorDetectionData {
-        GREEN(160, 0.57, 0.73, 32),
-        PURPLE(205, 0.415, 0.76, 32),
-        EMPTY(165, 0.435, 0.53, 40);
+        GREEN(159, 0.61, 0.57, 43),
+        PURPLE(210.46, 0.433, 0.59, 45),
+        EMPTY(150.77, 0.386, 0.40, 60);
 
         private double h;
         private double s;
