@@ -37,6 +37,12 @@ public class Launcher {
     private final static double LAUNCHER_TARGET_VELOCITY = 1630;
     public static final double FEED_POSITION_UP = 0.4, FEED_POSITION_DOWN = 0.7;
 
+    ColorDetectionVector[] config = new ColorDetectionVector[] {
+        new ColorDetectionVector(ColorSensorDetection.GREEN, 159, 0.61, 0.57, 43),
+        new ColorDetectionVector(ColorSensorDetection.PURPLE, 210.46, 0.433, 0.59, 45),
+        new ColorDetectionVector(ColorSensorDetection.EMPTY, 150.77, 0.386, 0.40, 60),
+    };
+
     public Launcher(OpMode opMode, Robot r) {
         robot = r;
         this.opMode = opMode;
@@ -97,7 +103,7 @@ public class Launcher {
 
     /* FLYWHEEL */
     public boolean flywheelReady() {
-        return Math.abs(flywheelGetError()) < 50;
+        return Math.abs(flywheelGetError()) < (launchProfile == LaunchProfile.FAR ? 100 : 50);
     }
 
     public Task flywheelReadyTimeout(int millis) {
@@ -201,14 +207,18 @@ public class Launcher {
         spindexer.setPosition(position);
     }
 
+    public void spindexerRotate(double dx) {
+        spindexerSetPosition(Util.clamp(spindexerGetPosition() + dx, 0, 1));
+    }
+
     private int spindexerIndex = 0;
-    private final static double[] spindexerPositions = {
-            0.0450, // intake
-            0.0767, // launch
-            0.1134,
-            0.1528,
-            0.1850,
-            0.2250,
+    public final static double[] spindexerPositions = {
+            0.0460, // intake: 0
+            0.0785, // launch: 1
+            0.1100, // intake: 2
+            0.1405, // launch: 0
+            0.1740, // intake: 1
+            0.2080, // launch: 2
     };
 
     public int spindexerGetIndex() {
@@ -353,85 +363,11 @@ public class Launcher {
     }
 
     /* COLOR SENSOR */
-    public enum ColorSensorDetection {
-        PURPLE,
-        GREEN,
-        EMPTY,
-    }
 
     public ColorSensorDetection colorSensorGetDetection() {
-//        if (colorSensorGetProximity() > 60) {
-//            return ColorSensorDetection.EMPTY;
-//        }
-//        else {
-//            if (colorSensorGetColors().v < 0.4) {
-//                return ColorSensorDetection.EMPTY;
-//            }
-//
-//            if (colorSensorGetColors().h < 185) {
-//                return ColorSensorDetection.GREEN;
-//            }
-//            else {
-//                return ColorSensorDetection.PURPLE;
-//            }
-//        }
-
-//        if (colorSensorGetProximity() > 45) {
-//            return ColorSensorDetection.EMPTY;
-//        }
-//        else {
-//            if (colorSensorGetColors().h > 180) {
-//                return ColorSensorDetection.PURPLE;
-//            }
-//
-//            if
-//        }
         Hsv color = colorSensorGetColors();
         double proximity = colorSensorGetProximity();
-        return ColorSensorDetectionData.identify(color.h, color.s, color.v, proximity);
-    }
-
-    private enum ColorSensorDetectionData {
-        GREEN(159, 0.61, 0.57, 43),
-        PURPLE(210.46, 0.433, 0.59, 45),
-        EMPTY(150.77, 0.386, 0.40, 60);
-
-        private double h;
-        private double s;
-        private double v;
-        private double p;
-
-        ColorSensorDetectionData(double h, double s, double v, double p) {
-            this.h = h;
-            this.s = s;
-            this.v = v;
-            this.p = p;
-        }
-
-        private ColorSensorDetection toDetection() {
-            switch (this) {
-                case PURPLE:
-                    return ColorSensorDetection.PURPLE;
-                case GREEN:
-                    return ColorSensorDetection.GREEN;
-                case EMPTY:
-                default:
-                    return ColorSensorDetection.EMPTY;
-            }
-        }
-
-        private static ColorSensorDetection identify(double h, double s, double v, double p) {
-            double closest = Double.POSITIVE_INFINITY;
-            ColorSensorDetection result = ColorSensorDetection.EMPTY;
-            for (ColorSensorDetectionData c : values()) {
-                double distanceSq = Util.sq(c.h - h) + Util.sq(c.s - s) + Util.sq(c.v - v) + Util.sq(c.p - p);
-                if (distanceSq < closest) {
-                    closest = distanceSq;
-                    result = c.toDetection();
-                }
-            }
-            return result;
-        }
+        return ColorDetectionVector.identify(config, color.h, color.s, color.v, proximity);
     }
 
     public void colorSensorDisplayDetection() {
