@@ -14,22 +14,23 @@ public class SpindexerBallTracker {
     }
 
     public void addBall(int spindexerIdx, ColorSensorDetection c) {
-        if (spindexerIdx % 2 != 0) throw new RuntimeException("AddBall Index Incorrect");
+        // if (spindexerIdx % 2 != 0) throw new RuntimeException("AddBall Index Incorrect. Received " + spindexerIdx);
 
-        int ballSlot = spindexerIdx;
-        if (spindexerIdx == 4) ballSlot = 1;
-
-        balls[ballSlot] = c;
+        balls[convertIndexToSlot(spindexerIdx)] = c;
     }
 
     public void removeBall(int spindexerIdx) {
-        if (spindexerIdx % 2 == 0) throw new RuntimeException("RemoveBall Index Incorrect");
+        // if (spindexerIdx % 2 == 0) throw new RuntimeException("RemoveBall Index Incorrect. Received " + spindexerIdx);
 
-        int ballSlot = spindexerIdx;
-        if (spindexerIdx == 3) ballSlot = 0;
-        else if (spindexerIdx == 5) ballSlot = 2;
+        balls[convertIndexToSlot(spindexerIdx)] = ColorSensorDetection.EMPTY;
+    }
 
-        balls[ballSlot] = ColorSensorDetection.EMPTY;
+    private int convertIndexToSlot(int spindexerIdx) {
+        if (spindexerIdx == 0 || spindexerIdx == 3) return 0;
+        if (spindexerIdx == 1 || spindexerIdx == 4) return 1;
+        if (spindexerIdx == 2 || spindexerIdx == 5) return 2;
+
+        return 0;
     }
 
     public String getCurrentBalls() {

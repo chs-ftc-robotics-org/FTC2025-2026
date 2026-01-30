@@ -371,7 +371,7 @@ public class Launcher {
     }
 
     public void colorSensorDisplayDetection() {
-        ColorSensorDetection detected = colorSensorGetDetection();
+        ColorSensorDetection detected = spindexerReadyToLaunch() ? colorSensorGetDetection() : robot.intake.colorSensorGetDetection();
 
         switch (detected) {
             case GREEN:

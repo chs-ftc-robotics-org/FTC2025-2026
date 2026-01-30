@@ -43,6 +43,7 @@ public class RipTeleOpNeo extends LinearOpMode {
             // ========== Intake ===========
             if ((gamepad1.right_bumper || gamepad2.right_trigger > 0.1) && intakeEnabled.get()) {
                 r.launcher.spinSetMode(Launcher.SpinMode.INTAKE);
+                // r.launcher.spindexerSetIndex(0);
                 if (r.launcher.spindexerReadyToIntake()) {
                     r.intake.start();
                 }
@@ -61,22 +62,9 @@ public class RipTeleOpNeo extends LinearOpMode {
                 r.launcher.feedDown();
             }
 
-            if (gamepad2.yWasReleased() && r.launcher.flywheelGetRpm() > 0) {
-//                if (numBalls.get() != 1) {
-//                    pool.tryAdd("AutoRotateSpindexer", Task.sequence(
-//                            Task.pause(500),
-//                            Task.once(() -> r.launcher.spinAddIndex(2))
-//                    ));
-//                }
-//                if (numBalls.get() == 1) {
-//                    // will become 0
-//                    pool.tryAdd("SetBallCountIntakeMode", Task.sequence(
-//                        Task.pause(1000),
-//                        Task.once(() -> r.launcher.spinSetMode(Launcher.SpinMode.INTAKE))
-//                    ));
-//                }
-//                numBalls.set(Math.max(numBalls.get() - 1, 0));
-            }
+//            if (gamepad2.yWasReleased() && r.launcher.spindexerReadyToLaunch()) {
+//                r.ballTracker.addBall(r.launcher.spindexerGetIndex(), r.launcher.colorSensorGetDetection());
+//            }
 
             if (gamepad1.dpadUpWasPressed()) {
                 r.launcher.garageDoorRotate(-0.01);
@@ -93,45 +81,44 @@ public class RipTeleOpNeo extends LinearOpMode {
                 r.launcher.setLaunchProfile(Launcher.LaunchProfile.DEFAULT);
             } else if (gamepad1.aWasPressed()) {
                   r.launcher.setLaunchProfile(Launcher.LaunchProfile.NEAR);
-              }
+            }
             
             if (r.intake.finIsNotPressed()) {
-                boolean modNumBalls = false;
                 if (gamepad2.dpadLeftWasPressed()) {
+                    if (r.launcher.spindexerReadyToIntake()) r.ballTracker.addBall(r.launcher.spindexerGetIndex(), r.intake.colorSensorGetDetection());
                     r.launcher.spindexerAddIndex(-2);
-                    if (gamepad2.a) modNumBalls = true;
+//                    if (r.launcher.spindexerReadyToIntake()) {
+//                        r.pool.forceAdd("RotateSpindexerLeft", Task.sequence(
+//                            Task.once(() -> ),
+//                            Task.pause(25),
+//                            Task.once(() -> r.launcher.spindexerAddIndex(-2))
+//                        ));
+//                    } else {
+//                        r.launcher.spindexerAddIndex(-2);
+//                    }
                 }
                 else if (gamepad2.dpadRightWasPressed()) {
+                    if (r.launcher.spindexerReadyToIntake()) r.ballTracker.addBall(r.launcher.spindexerGetIndex(), r.intake.colorSensorGetDetection());
                     r.launcher.spindexerAddIndex(2);
-                    if (gamepad2.a) modNumBalls = true;
-                }
-
-//                if (modNumBalls) {
-//                    if (numBalls.get() == 2) {
-//                        // will become 3
-//                        r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
+//                    if (r.launcher.spindexerReadyToIntake()) {
+//                        r.pool.forceAdd("RotateSpindexerRight", Task.sequence(
+//                            Task.once(() -> ),
+//                            Task.pause(25),
+//                            Task.once(() -> r.launcher.spindexerAddIndex(2))
+//                        ));
+//                    } else {
+//                        r.launcher.spindexerAddIndex(2);
 //                    }
-//                    numBalls.set(Math.min(numBalls.get() + 1, 3));
-//                }
+                }
             }
-
-//            if (r.joystick2.leftXUpdated()) {
-//                switch (r.joystick2.leftX()) {
-//                    case NEGATIVE:
-//                        r.launcher.spinNext();
-//                        break;
-//                    case POSITIVE:
-//                        r.launcher.spinPrev();
-//                        break;
-//                }
-//            }
 
             if (gamepad2.dpad_up) {
                 r.launcher.spindexerSetIndex(1);
-//                r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
+                // r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
             }
             else if (gamepad2.dpad_down) {
-                r.launcher.spinSetMode(Launcher.SpinMode.INTAKE);
+                r.launcher.spindexerSetIndex(0);
+                // r.launcher.spinSetMode(Launcher.SpinMode.INTAKE);
             }
 
             if (gamepad1.bWasPressed()) {
@@ -166,19 +153,12 @@ public class RipTeleOpNeo extends LinearOpMode {
                 ));
 
                 pool.tryAdd("EmergencyEnableIntake", Task.sequence(
-                        Task.pause(2000),
+                        Task.pause(750),
                         Task.once(() -> intakeEnabled.set(true))
                 ));
             }
             else if (!intakeFinPrevState.get() && r.intake.finIsNotPressed()) {
                 pool.remove("EmergencyEnableIntake");
-//                if (r.intake.powerGet() >= 0) {
-//                    if (numBalls.get() == 2) {
-//                        // will become 3
-//                        r.launcher.spinSetMode(Launcher.SpinMode.LAUNCH);
-//                    }
-//                    numBalls.set(Math.min(numBalls.get() + 1, 3));
-//                }
 
                 r.ballTracker.addBall(r.launcher.spindexerGetIndex(), r.intake.colorSensorGetDetection());
                 r.launcher.spindexerAddIndex(2);

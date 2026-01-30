@@ -64,12 +64,15 @@ public class Camera {
     }
 
     public Coordinate2D botposeGetEstimate() {
-        LLResult result = getLatestResult();
-        if (result != null && result.isValid()) {
-            Pose3D botpose = result.getBotpose();
+        LLResult r = getLatestResult();
+        if (r == null && !r.isValid()) return null;
+
+        for (LLResultTypes.FiducialResult f : r.getFiducialResults()) {
+            if (f.getFiducialId() != 20 && f.getFiducialId() != 24) continue;
+
+            Pose3D botpose = r.getBotpose();
             if (botpose != null) {
                 return new Coordinate2D(botpose.getPosition().x, botpose.getPosition().y);
-                // telemetry.addData("MT1 Location", "(" + x + ", " + y + ")");
             }
         }
 

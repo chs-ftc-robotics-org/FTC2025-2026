@@ -212,22 +212,36 @@ public class Robot {
         return Task.of(() -> {}, () -> { delegate.run(); return CONTINUE; }, drivetrain::stop);
     }
 
-    private static final double[] DISTANCES = new double[] { 0.34885527085, 0.648151216924, 0.992018144995, 1.66760307028 };
-    private static final double[] POWERS = new double[] { 1700, 1700, 1860, 2300 };
-    private final double[] GARAGE_DOOR_POSITIONS = new double[] { 0.7294, 0.7294, 0.7294, 0.3489 };
+    private static final double[] DISTANCES = new double[] { 0.0, 0.34885527085, 0.787464284904, 1.24402572321, 1.66760307028 };
+    private static final double[] POWERS = new double[] { 1500, 1700, 1780, 1860, 2250 };  /*{ 0, 1700, 1700, 1860, 2300 };*/
+    private final double[] GARAGE_DOOR_POSITIONS = new double[] { 0.7294, 0.7294, 0.7294, 0.7294, 0.3489 };
 
     public double[] findIdealLauncherSettings(Coordinate2D c) {
         double dist = Math.sqrt(Math.pow((-1.3 - c.x()), 2) + Math.pow(1.19 - c.y(), 2));
 
         int chosenIdx = DISTANCES.length - 1;
         for (int i = 0; i < DISTANCES.length; i++) {
-            if (dist < DISTANCES[i]) {
+            if (dist <= DISTANCES[i]) {
                 chosenIdx = i;
                 break;
             }
         }
 
-        return new double[] { POWERS[chosenIdx], GARAGE_DOOR_POSITIONS[chosenIdx] };
+        // Dynamically adjust power
+        double percentTraveled = (dist - DISTANCES[chosenIdx - 1]) / (DISTANCES[chosenIdx] - DISTANCES[chosenIdx - 1]);
+        double powerDiff = POWERS[chosenIdx] - POWERS[chosenIdx - 1];
+        double power = POWERS[chosenIdx - 1] + (percentTraveled * powerDiff);
+
+        return new double[] {
+            interpolate(dist, DISTANCES[chosenIdx - 1], DISTANCES[chosenIdx], POWERS[chosenIdx - 1], POWERS[chosenIdx]),
+            interpolate(dist, DISTANCES[chosenIdx - 1], DISTANCES[chosenIdx], GARAGE_DOOR_POSITIONS[chosenIdx - 1], GARAGE_DOOR_POSITIONS[chosenIdx])
+        };
+    }
+
+    private double interpolate(double current, double min, double max, double varMin, double varMax) {
+        double proportion = (current - min) / (max - min);
+        double diff = varMax - varMin;
+        return varMin + (proportion * diff);
     }
 
     public Task autoPower() {
