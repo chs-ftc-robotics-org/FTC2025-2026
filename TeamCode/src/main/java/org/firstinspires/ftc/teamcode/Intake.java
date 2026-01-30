@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -11,7 +12,11 @@ import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
+@Config
 public class Intake {
+    public static double ALIGN_BIAS = 90;
+    public static double ALIGN_TOLERANCE = 40;
+
     private final DcMotor motor;
 
     private final TouchSensor fin;
@@ -76,6 +81,12 @@ public class Intake {
         return colorSensor.getDistance(DistanceUnit.MM);
     }
 
+    public double getHorizontalBias() {
+        double rawDistance = rightDist.getDistance(DistanceUnit.MM);
+        if (rawDistance > 220) return 0; // Nothing in intake
+        return rawDistance - ALIGN_BIAS;
+    }
+    
     @TeleOp(name = "Intake Test", group = "tests")
     public static class Test extends LinearOpMode {
         @Override

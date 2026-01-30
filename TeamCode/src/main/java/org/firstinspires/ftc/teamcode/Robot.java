@@ -213,7 +213,7 @@ public class Robot {
     }
 
     private static final double[] DISTANCES = new double[] { 0.0, 0.34885527085, 0.787464284904, 1.24402572321, 1.66760307028 };
-    private static final double[] POWERS = new double[] { 1500, 1700, 1780, 1860, 2250 };  /*{ 0, 1700, 1700, 1860, 2300 };*/
+    private static final double[] POWERS = new double[] { 1500, 1700, 1760, 1860, 2250 };  /*{ 0, 1700, 1700, 1860, 2300 };*/
     private final double[] GARAGE_DOOR_POSITIONS = new double[] { 0.7294, 0.7294, 0.7294, 0.7294, 0.3489 };
 
     public double[] findIdealLauncherSettings(Coordinate2D c) {
@@ -227,14 +227,10 @@ public class Robot {
             }
         }
 
-        // Dynamically adjust power
-        double percentTraveled = (dist - DISTANCES[chosenIdx - 1]) / (DISTANCES[chosenIdx] - DISTANCES[chosenIdx - 1]);
-        double powerDiff = POWERS[chosenIdx] - POWERS[chosenIdx - 1];
-        double power = POWERS[chosenIdx - 1] + (percentTraveled * powerDiff);
-
         return new double[] {
             interpolate(dist, DISTANCES[chosenIdx - 1], DISTANCES[chosenIdx], POWERS[chosenIdx - 1], POWERS[chosenIdx]),
-            interpolate(dist, DISTANCES[chosenIdx - 1], DISTANCES[chosenIdx], GARAGE_DOOR_POSITIONS[chosenIdx - 1], GARAGE_DOOR_POSITIONS[chosenIdx])
+            GARAGE_DOOR_POSITIONS[chosenIdx]
+            // interpolate(dist, DISTANCES[chosenIdx - 1], DISTANCES[chosenIdx], GARAGE_DOOR_POSITIONS[chosenIdx - 1], GARAGE_DOOR_POSITIONS[chosenIdx])
         };
     }
 
