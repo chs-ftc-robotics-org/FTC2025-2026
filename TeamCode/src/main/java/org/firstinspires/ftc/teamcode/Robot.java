@@ -180,7 +180,7 @@ public class Robot {
         if (target == null) return null;
 
         double error = target.x();
-        double adjust = this.launcher.getLaunchProfile() == Launcher.LaunchProfile.FAR ? -4 : 0;
+        double adjust = (this.launcher.getLaunchProfile() == Launcher.LaunchProfile.FAR || (this.launcher.getLaunchProfile() == Launcher.LaunchProfile.DYNAMIC && currentDistanceFromGoal > 1.3)) ? -4 : 0;
 
         return this.odometry.directionNormalized() - error + adjust;
     }
@@ -212,12 +212,16 @@ public class Robot {
         return Task.of(() -> {}, () -> { delegate.run(); return CONTINUE; }, drivetrain::stop);
     }
 
-    private static final double[] DISTANCES = new double[] { 0.0, 0.34885527085, 0.787464284904, 1.24402572321, 1.66760307028 };
-    private static final double[] POWERS = new double[] { 1500, 1700, 1760, 1860, 2250 };  /*{ 0, 1700, 1700, 1860, 2300 };*/
-    private final double[] GARAGE_DOOR_POSITIONS = new double[] { 0.7294, 0.7294, 0.7294, 0.7294, 0.3489 };
+    private static final double[] DISTANCES = new double[] { 0.0, 0.1788854382, 0.365624123931, 0.572064681658, 0.798598772852, 1.06080394042, 1.68369237095 }; /* { 0.0, 0.34885527085, 0.787464284904, 1.24402572321, 1.66760307028 }; */
+    private static final double[] POWERS = new double[] { 1500, 1650, 1720, 1820, 1875, 1920, 2400 }; /* { 1500, 1700, 1760, 1860, 2250 }; */
+    private final double[] GARAGE_DOOR_POSITIONS = new double[] { 0.7294, 0.7294, 0.7294, 0.7294, 0.7294, 0.7294, 0.3489 };
 
+    private double currentDistanceFromGoal = Integer.MIN_VALUE;
     public double[] findIdealLauncherSettings(Coordinate2D c) {
+        if (DISTANCES.length != POWERS.length || DISTANCES.length != GARAGE_DOOR_POSITIONS.length) throw new RuntimeException("Interpolation Array Dimensions Mismatch");
+
         double dist = Math.sqrt(Math.pow((-1.3 - c.x()), 2) + Math.pow(1.19 - c.y(), 2));
+        currentDistanceFromGoal = dist;
 
         int chosenIdx = DISTANCES.length - 1;
         for (int i = 0; i < DISTANCES.length; i++) {

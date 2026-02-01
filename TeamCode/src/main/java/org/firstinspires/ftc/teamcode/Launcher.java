@@ -332,13 +332,13 @@ public class Launcher {
 
     private LaunchProfile launchProfile = LaunchProfile.DEFAULT;
 
-//    public void handleGarageDoorSpecialCases() {
-//        if (this.launchProfile == LaunchProfile.CALIBRATION) {
-//            garageDoorSetPosition(Util.clamp(CALI_GARAGE_DOOR_POS, GARAGE_POSITION_MIN, GARAGE_POSITION_MAX));
-//        } else if (this.launchProfile == LaunchProfile.DYNAMIC) {
-//            garageDoorSetPosition(Util.clamp(DYNAMIC_GARAGE_DOOR_POS, GARAGE_POSITION_MIN, GARAGE_POSITION_MAX));
-//        }
-//    }
+    public void handleGarageDoorSpecialCases() {
+        if (this.launchProfile == LaunchProfile.CALIBRATION) {
+            garageDoorSetPosition(Util.clamp(CALI_GARAGE_DOOR_POS, GARAGE_POSITION_MIN, GARAGE_POSITION_MAX));
+        } else if (this.launchProfile == LaunchProfile.DYNAMIC) {
+            garageDoorSetPosition(Util.clamp(DYNAMIC_GARAGE_DOOR_POS, GARAGE_POSITION_MIN, GARAGE_POSITION_MAX));
+        }
+    }
 
     public void setLaunchProfile(LaunchProfile profile) {
         if (this.launchProfile == LaunchProfile.DYNAMIC) {

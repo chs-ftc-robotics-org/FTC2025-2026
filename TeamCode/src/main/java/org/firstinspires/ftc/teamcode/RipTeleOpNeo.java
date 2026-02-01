@@ -178,6 +178,7 @@ public class RipTeleOpNeo extends LinearOpMode {
                     r.pool.remove("LiveFaceGoal");
                     r.pool.remove("AutoPower");
                 }
+                // r.launcher.setLaunchProfile(Launcher.LaunchProfile.CALIBRATION);
             }
 
             if (gamepad2.xWasPressed()) {
@@ -220,7 +221,7 @@ public class RipTeleOpNeo extends LinearOpMode {
             telemetry.addData("Number of Balls", numBalls.get());
 
             r.camera.report();
-            // r.launcher.handleGarageDoorSpecialCases();
+            r.launcher.handleGarageDoorSpecialCases();
 
             return Task.CONTINUE;
         });
