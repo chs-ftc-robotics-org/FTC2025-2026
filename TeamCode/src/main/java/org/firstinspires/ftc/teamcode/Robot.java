@@ -49,6 +49,7 @@ public class Robot {
             odometry.log();
             launcher.flywheelDisplayRpm();
             launcher.lockReport();
+            // intake.update();
             opMode.telemetry.addData("Motif", motif.get());
             opMode.telemetry.addData("Spin index", launcher.spindexerGetIndex());
             opMode.telemetry.addData("Active tasks", pool.activeTaskNames());

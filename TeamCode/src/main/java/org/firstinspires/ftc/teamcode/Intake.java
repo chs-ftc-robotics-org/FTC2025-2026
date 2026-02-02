@@ -9,8 +9,11 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.TouchSensor;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+
+import java.util.concurrent.TimeUnit;
 
 @Config
 public class Intake {
@@ -85,6 +88,33 @@ public class Intake {
         double rawDistance = rightDist.getDistance(DistanceUnit.MM);
         if (rawDistance > 220) return 0; // Nothing in intake
         return rawDistance - ALIGN_BIAS;
+    }
+
+    private double previousBias = Double.NaN;
+    private final ElapsedTime rocTimer = new ElapsedTime();
+    private final ElapsedTime cooldownTimer = new ElapsedTime(COOLDOWN_TIME);
+
+    private double biasRateOfChange = 0.0;
+    private static final int COOLDOWN_TIME = 100;
+
+    private void update() {
+        // Calculate derivative of bias
+        double bias = getHorizontalBias();
+        double dt = rocTimer.time(TimeUnit.MILLISECONDS) / 1000.0;
+        if (Double.isNaN(previousBias)) previousBias = bias;
+        biasRateOfChange = (bias - previousBias) / dt;
+        previousBias = bias;
+        rocTimer.reset();
+
+        if (Math.abs(biasRateOfChange) > 2000) {
+            cooldownTimer.reset();
+        }
+    }
+
+    public double suggestedHorizontalPower() {
+        update();
+        if (cooldownTimer.time(TimeUnit.MILLISECONDS) < COOLDOWN_TIME) return 0;
+        return 0.005 * -getHorizontalBias();
     }
     
     @TeleOp(name = "Intake Test", group = "tests")

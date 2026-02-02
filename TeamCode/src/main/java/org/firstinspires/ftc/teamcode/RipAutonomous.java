@@ -17,12 +17,14 @@ public class RipAutonomous {
 
                 r.faceDir(side * -43, 0.6),
                 r.faceClosestGoal(),
-                Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS)),
+                Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.DYNAMIC)),
                 r.launchMotif(0),
                 r.moveBy(side * -3, -12, 0.5),
                 r.faceDir(side * -90, 0.35),
                 // r.moveBy(0, -13, 0.6),
-                doIntake(r),
+                rawMove(r, -0.35),
+                Task.pause(400),
+                intakeBalls(r),
                 rawMove(r, 0.0),
                 r.moveBy(side * 36, 10, 0.5),
                 r.faceDir(side * -50, 0.45),
@@ -36,7 +38,7 @@ public class RipAutonomous {
 //                 Task.once(r.intake::stop),
 //                r.moveBy(-24, -24, 0.5)
         );
-        r.runTask(t);
+        r.runTask(Task.all(t, r.autoPower()));
     }
 
     private static void basicParkingSide(LinearOpMode opMode, double side) {
@@ -48,18 +50,26 @@ public class RipAutonomous {
 
                 Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS_FAR)),
                 r.moveBy(0, 1.2, 0.3),
-                r.faceDir(side * -23.5, 0.3),
+                r.faceDir(side * -20, 0.3),
                 // r.faceClosestGoal(),
+                // r.faceDir(side * -23.5, 0.3),
+                // r.faceClosestGoal(),
+                Task.once(() -> r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal())),
                 r.launchMotif(0),
-                r.faceDir(side * -90, 0.4),
-                r.moveBy(side * -10, 23, 0.6),
+                Task.once(() -> r.pool.remove("LiveFaceGoal")),
+                r.faceDir(side * -90, 0.35),
+                r.moveBy(side * -10, 23, 0.4),
                 Task.once(() -> { pos[0] = r.odometry.posX(); pos[1] = r.odometry.posY(); }),
-                doIntake(r),
+                intakeBalls(r),
                 Task.lazy(() -> r.moveTo(pos[0], pos[1], 0.6)),
-                r.moveBy(side * 10, -24, 0.6),
-                r.faceDir(side * -23.5, 0.4),
+                r.moveBy(side * 10, -24, 0.5),
+                r.faceDir(side * -20, 0.3),
+                // r.faceClosestGoal(),
+                // r.faceDir(side * -23.5, 0.4),
+                Task.once(() -> r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal())),
                 Task.pause(500),
                 r.launchMotif(0),
+                Task.once(() -> r.pool.remove("LiveFaceGoal")),
                 r.moveBy(side * -5, 12, 0.6)
 
 //                r.moveBy()
@@ -70,13 +80,15 @@ public class RipAutonomous {
                 //r.launchMotif(0),
                 // r.moveBy(side * -20, 20, 0.4)
         );
-        r.runTask(t);
+        r.runTask(Task.all(t, r.autoPower()));
     }
 
-    private static Task doIntake(Robot r) {
+    private static Task intakeBalls(Robot r) {
         return Task.sequence(
                 Task.once(() -> r.launcher.spindexerSetIndex(0)),
                 Task.once(r.intake::start),
+//                rawMove(r, -0.35),
+//                Task.pause(400),
                 rawMove(r, -0.15),
                 Task.until(() -> !r.intake.finIsNotPressed()),
                 Task.once(r.drivetrain::stop),
@@ -150,8 +162,9 @@ public class RipAutonomous {
 
     private static Task rawMove(Robot r, double power) {
         return Task.once(() -> {
+            // double px = r.intake.suggestedHorizontalPower();
             r.drivetrain.setFactor(1.0);
-            r.drivetrain.move(0, power, 0);
+            r.drivetrain.move(0.0, power, 0);
         });
     }
 
