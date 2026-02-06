@@ -24,7 +24,7 @@ public class Intake {
 
     private final TouchSensor fin;
 
-    private final DistanceSensor leftDist;
+    // private final DistanceSensor leftDist;
     private final DistanceSensor rightDist;
 
     private final RevColorSensorV3 colorSensor;
@@ -42,7 +42,7 @@ public class Intake {
 
         fin = opMode.hardwareMap.get(TouchSensor.class, "touch");
 
-        leftDist = opMode.hardwareMap.get(DistanceSensor.class, "intake/distance/left");
+        // leftDist = opMode.hardwareMap.get(DistanceSensor.class, "intake/distance/left");
         rightDist = opMode.hardwareMap.get(DistanceSensor.class, "intake/distance/right");
 
         colorSensor = opMode.hardwareMap.get(RevColorSensorV3.class, "intake/color");

@@ -17,7 +17,7 @@ public class RipAutonomous {
 
                 r.faceDir(side * -43, 0.6),
                 r.faceClosestGoal(),
-                Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.DYNAMIC)),
+                Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS)),
                 r.launchMotif(0),
                 r.moveBy(side * -3, -12, 0.5),
                 r.faceDir(side * -90, 0.35),
@@ -38,49 +38,62 @@ public class RipAutonomous {
 //                 Task.once(r.intake::stop),
 //                r.moveBy(-24, -24, 0.5)
         );
-        r.runTask(Task.all(t, r.autoPower()));
+        r.runTask(t);
     }
 
     private static void basicParkingSide(LinearOpMode opMode, double side) {
         Robot r = new Robot(opMode, 0);
         double[] pos = {0.0, 0.0};
+
+        Box<Boolean> finished = Box.of(false);
+
         Task t = Task.sequence(
-                r.fetchMotif(),
-                Task.once(() -> r.launcher.flywheelRunWithPower(0.9)),
+            r.fetchMotif(),
+            Task.once(() -> r.launcher.flywheelRunWithPower(0.9)),
 
-                Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS_FAR)),
-                r.moveBy(0, 1.2, 0.3),
-                r.faceDir(side * -20, 0.3),
-                // r.faceClosestGoal(),
-                // r.faceDir(side * -23.5, 0.3),
-                // r.faceClosestGoal(),
-                Task.once(() -> r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal())),
-                r.launchMotif(0),
-                Task.once(() -> r.pool.remove("LiveFaceGoal")),
-                r.faceDir(side * -90, 0.35),
-                r.moveBy(side * -10, 23, 0.4),
-                Task.once(() -> { pos[0] = r.odometry.posX(); pos[1] = r.odometry.posY(); }),
-                intakeBalls(r),
-                Task.lazy(() -> r.moveTo(pos[0], pos[1], 0.6)),
-                r.moveBy(side * 10, -24, 0.5),
-                r.faceDir(side * -20, 0.3),
-                // r.faceClosestGoal(),
-                // r.faceDir(side * -23.5, 0.4),
-                Task.once(() -> r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal())),
-                Task.pause(500),
-                r.launchMotif(0),
-                Task.once(() -> r.pool.remove("LiveFaceGoal")),
-                r.moveBy(side * -5, 12, 0.6)
+            Task.once(() -> r.launcher.setLaunchProfile(Launcher.LaunchProfile.AUTONOMOUS_FAR)),
+            r.moveBy(0, 1.2, 0.3),
+            // r.faceDir(side * -20, 0.3),
+            // r.faceClosestGoal(),
+            r.faceDir(side * -25.0, 0.3),
+            // r.faceClosestGoal(),
+            // Task.once(() -> r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal())),
+            r.launchMotif(0),
+            // Task.once(() -> r.pool.remove("LiveFaceGoal")),
+            r.faceDir(side * -90, 0.35),
+            r.moveBy(side * -10, 23, 0.4),
+            Task.once(() -> { pos[0] = r.odometry.posX(); pos[1] = r.odometry.posY(); }),
+            intakeBalls(r),
+            Task.lazy(() -> r.moveTo(pos[0], pos[1], 0.6)),
+            Task.once(() -> r.launcher.flywheelRunWithPower(0.9)),
+            r.moveBy(side * 10, -24, 0.5),
+            // r.faceDir(side * -20, 0.3),
+            // r.faceClosestGoal(),
+            r.faceDir(side * -25.0, 0.4),
+            // Task.once(() -> r.pool.forceAdd("LiveFaceGoal", r.liveFaceGoal())),
+            // Task.pause(500),
+            r.launchMotif(0),
+            // Task.once(() -> r.pool.remove("LiveFaceGoal")),
+            Task.once(() -> finished.set(true)),
+            r.moveBy(side * -5, 12, 0.6)
 
-//                r.moveBy()
-//                r.moveTo(-10, 10, 0.5),
-//                r.moveTo(0, 0, 0.2),
-//                r.faceDir(side * -23.5, 0.3),
-                // r.faceClosestGoal(),
-                //r.launchMotif(0),
-                // r.moveBy(side * -20, 20, 0.4)
+//            r.moveBy()
+//            r.moveTo(-10, 10, 0.5),
+//            r.moveTo(0, 0, 0.2),
+//            r.faceDir(side * -23.5, 0.3),
+            // r.faceClosestGoal(),
+            //r.launchMotif(0),
+            // r.moveBy(side * -20, 20, 0.4)
         );
-        r.runTask(Task.all(t, r.autoPower()));
+
+        Task leave = Task.sequence(
+            Task.pause(28000),
+            Task.lazy(
+                () -> finished.get() ? Task.once(() -> {}) : r.moveBy(side * -5, 12, 0.6)
+            )
+        );
+
+        r.runTask(Task.all(t, leave));
     }
 
     private static Task intakeBalls(Robot r) {
